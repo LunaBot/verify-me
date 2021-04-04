@@ -542,6 +542,48 @@ export const start = async () => {
             `
         }));
 
+        // Get member
+        const member = messageReaction.message.guild?.members.cache.get(user.id);
+
+        // Get audit-log channel
+        const auditLogChannelId = guilds.get(messageReaction.message.guild?.id!, 'auditLogChannel');
+        const auditLogChannel = messageReaction.message.guild?.channels.cache.find(channel => channel.id === auditLogChannelId) as TextChannel;
+
+        // Post in audit-log
+        await auditLogChannel.send(new MessageEmbed({
+            color: colours.AQUA,
+            author: {
+                name: `Ticket number #${`${ticketNumber}`.padStart(5, '0')}`,
+                iconURL: member?.user.displayAvatarURL()
+            },
+            fields: [{
+                name: 'Username',
+                value: member?.user.username,
+                inline: true
+            }, {
+                name: 'Discriminator',
+                value: member?.user.discriminator,
+                inline: true
+            }, {
+                name: 'Default avatar',
+                value: member?.user.displayAvatarURL() ? 'Yes' : 'No',
+                inline: true
+            }, {
+                name: 'ID',
+                value: user.id,
+                inline: true
+            }, {
+                name: 'Ticket number',
+                value: ticketNumber,
+                inline: true
+            }, {
+                name: 'State',
+                value: 'opened',
+                inline: true
+            }]
+        }));
+
+        // Store questions
         const questions = [{
             emoji: '❌',
             text: dedent`
