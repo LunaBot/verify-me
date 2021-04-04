@@ -186,7 +186,7 @@ export const start = async () => {
             // If they're the owner let them set the admin role
             // !verify-settings set-admin 828108533953986582
             if (message.guild.owner?.id === message.author.id) {
-                if (command === 'set-admin') {
+                if (command === 'set-admin-role') {
                     // Make sure we have the role we're asking for
                     const role = message.guild.roles.cache.find(role => role.id === args[0]);
                     if (!role) {
@@ -329,160 +329,160 @@ export const start = async () => {
 
         // If we're in the queue channel then make sure it's an admin, if so then they're likely allowing/denying a verification
         if (messageReaction.message.channel.id === guilds.get(messageReaction.message.guild?.id!, 'queueChannel')) {
-            if (messageReaction.message.guild?.members.cache.get(user.id)?.roles.cache.find(role => role.id === guilds.get(messageReaction.message.guild?.id!, 'adminRole'))) {
-                // Attempt to get the member ID
-                const memberId = messageReaction.message.embeds[0].fields.find(field => field.name === 'ID')?.value;
+            // Bail if it's not an admin
+            if (!messageReaction.message.guild?.members.cache.get(user.id)?.roles.cache.find(role => role.id === guilds.get(messageReaction.message.guild?.id!, 'adminRole'))) return;
+            // Attempt to get the member ID
+            const memberId = messageReaction.message.embeds[0].fields.find(field => field.name === 'ID')?.value;
 
-                // Make sure this is one of our embeds
-                if (!memberId) return;
-                
-                // Get member
-                const member = messageReaction.message.guild.members.cache.get(memberId!);
+            // Make sure this is one of our embeds
+            if (!memberId) return;
+            
+            // Get member
+            const member = messageReaction.message.guild.members.cache.get(memberId!);
 
-                // Approved
-                if (messageReaction.emoji.name === '👍') {
-                    // Get role to add to member
-                    const roleIds = guilds.get(messageReaction.message.guild?.id!, 'roles');
-                    const roles = roleIds.map(roleId => messageReaction.message.guild?.roles.cache.get(roleId)).filter(role => role);
+            // Approved
+            if (messageReaction.emoji.name === '👍') {
+                // Get role to add to member
+                const roleIds = guilds.get(messageReaction.message.guild?.id!, 'roles');
+                const roles = roleIds.map(roleId => messageReaction.message.guild?.roles.cache.get(roleId)).filter(role => role);
 
-                    // Make sure the role exists
-                    if (roles.length === 0) return;
+                // Make sure the role exists
+                if (roles.length === 0) return;
 
-                    // Try to add all the roles to the member
-                    await Promise.allSettled(roles.map(role => member?.roles.add(role)));
-
-                    // Get ticket number
-                    const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
-
-                    // Mark verified
-                    members.set(`${messageReaction.message.guild?.id}_${member?.id}`, 'verified', 'state');
-
-                    // Log ticket approved
-                    logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'APPROVED');
-
-                    // Let the member know
-                    await member?.send(new MessageEmbed({
-                        color: colours.GREEN,
-                        author: {
-                            name: '🚀 Verification approved!'
-                        },
-                        fields: [{
-                            name: 'Guild',
-                            value: messageReaction.message.guild.name
-                        }, {
-                            name: 'Ticket #',
-                            value: `${ticketNumber}`.padStart(5, '0')
-                        }],
-                        description: 'Your verification was approved!'
-                    }));
-                }
-
-                // Redo
-                if (messageReaction.emoji.name === '🔁') {
-                    // Get ticket number
-                    const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
-
-                    // Reset member's state
-                    members.set(`${messageReaction.message.guild?.id}_${member?.id}`, 'closed', 'state');
-
-                    // Log ticket redo
-                    logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'REDO');
-
-                    // Let the member know
-                    await member?.send(new MessageEmbed({
-                        color: colours.RED,
-                        author: {
-                            name: '🚀 Verification denied!'
-                        },
-                        fields: [{
-                            name: 'Guild',
-                            value: messageReaction.message.guild.name
-                        }, {
-                            name: 'Ticket #',
-                            value: `${ticketNumber}`.padStart(5, '0')
-                        }],
-                        description: 'Don\'t worry though as you\'re able to redo it, just visit the server where you applied and retry.'
-                    }));
-                }
-
-                // Denied
-                if (messageReaction.emoji.name === '👎') {
-                    // Get ticket number
-                    const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
-
-                    // Ensure the user can't apply again
-                    members.set(`${messageReaction.message.guild?.id}_${member?.id}`, 'denied', 'state');
-
-                    // Log ticket denied
-                    logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'DENIED');
-
-                    // Let the member know
-                    await member?.send(new MessageEmbed({
-                        author: {
-                            name: '🚀 Verification denied!'
-                        },
-                        fields: [{
-                            name: 'Guild',
-                            value: messageReaction.message.guild.name
-                        }, {
-                            name: 'Ticket #',
-                            value: `${ticketNumber}`.padStart(5, '0')
-                        }],
-                        description: 'Your verification was denied!'
-                    }));
-
-                    // Wait 1s
-                    await sleep(1000);
-
-                    // Kick the member
-                    await member?.kick();
-                }
-
-                // Get audit-log channel
-                const auditLogChannelId = guilds.get(messageReaction.message.guild?.id!, 'auditLogChannel');
-                const auditLogChannel = messageReaction.message.guild?.channels.cache.find(channel => channel.id === auditLogChannelId) as TextChannel;
+                // Try to add all the roles to the member
+                await Promise.allSettled(roles.map(role => member?.roles.add(role)));
 
                 // Get ticket number
                 const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
 
-                // Post in audit-log
-                await auditLogChannel.send(new MessageEmbed({
-                    color: messageReaction.emoji.name === '👍' ? colours.GREEN : (messageReaction.emoji.name === '👎' ? colours.RED : colours.ORANGE),
+                // Mark verified
+                members.set(`${messageReaction.message.guild?.id}_${member?.id}`, 'verified', 'state');
+
+                // Log ticket approved
+                logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'APPROVED');
+
+                // Let the member know
+                await member?.send(new MessageEmbed({
+                    color: colours.GREEN,
                     author: {
-                        name: `Ticket number #${`${ticketNumber}`.padStart(5, '0')}`,
-                        iconURL: member?.user.displayAvatarURL()
+                        name: '🚀 Verification approved!'
                     },
                     fields: [{
-                        name: 'Username',
-                        value: member?.user.username,
-                        inline: true
+                        name: 'Guild',
+                        value: messageReaction.message.guild.name
                     }, {
-                        name: 'Discriminator',
-                        value: member?.user.discriminator,
-                        inline: true
+                        name: 'Ticket #',
+                        value: `${ticketNumber}`.padStart(5, '0')
+                    }],
+                    description: 'Your verification was approved!'
+                }));
+            }
+
+            // Redo
+            if (messageReaction.emoji.name === '🔁') {
+                // Get ticket number
+                const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
+
+                // Reset member's state
+                members.set(`${messageReaction.message.guild?.id}_${member?.id}`, 'closed', 'state');
+
+                // Log ticket redo
+                logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'REDO');
+
+                // Let the member know
+                await member?.send(new MessageEmbed({
+                    color: colours.RED,
+                    author: {
+                        name: '🚀 Verification denied!'
+                    },
+                    fields: [{
+                        name: 'Guild',
+                        value: messageReaction.message.guild.name
                     }, {
-                        name: 'Default avatar',
-                        value: member?.user.displayAvatarURL() ? 'Yes' : 'No',
-                        inline: true
+                        name: 'Ticket #',
+                        value: `${ticketNumber}`.padStart(5, '0')
+                    }],
+                    description: 'Don\'t worry though as you\'re able to redo it, just visit the server where you applied and retry.'
+                }));
+            }
+
+            // Denied
+            if (messageReaction.emoji.name === '👎') {
+                // Get ticket number
+                const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
+
+                // Ensure the user can't apply again
+                members.set(`${messageReaction.message.guild?.id}_${member?.id}`, 'denied', 'state');
+
+                // Log ticket denied
+                logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'DENIED');
+
+                // Let the member know
+                await member?.send(new MessageEmbed({
+                    author: {
+                        name: '🚀 Verification denied!'
+                    },
+                    fields: [{
+                        name: 'Guild',
+                        value: messageReaction.message.guild.name
                     }, {
-                        name: 'ID',
-                        value: memberId,
-                        inline: true
-                    }, {
-                        name: 'Ticket number',
-                        value: ticketNumber,
-                        inline: true
-                    }, {
-                        name: 'State',
-                        value: messageReaction.emoji.name === '👍' ? 'approved' : (messageReaction.emoji.name === '👎' ? 'denied' : 'pending redo'),
-                        inline: true
-                    }]
+                        name: 'Ticket #',
+                        value: `${ticketNumber}`.padStart(5, '0')
+                    }],
+                    description: 'Your verification was denied!'
                 }));
 
-                // Delete the queued verification message
-                await messageReaction.message.delete();
-                return;
+                // Wait 1s
+                await sleep(1000);
+
+                // Kick the member
+                await member?.kick();
             }
+
+            // Get audit-log channel
+            const auditLogChannelId = guilds.get(messageReaction.message.guild?.id!, 'auditLogChannel');
+            const auditLogChannel = messageReaction.message.guild?.channels.cache.find(channel => channel.id === auditLogChannelId) as TextChannel;
+
+            // Get ticket number
+            const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
+
+            // Post in audit-log
+            await auditLogChannel.send(new MessageEmbed({
+                color: messageReaction.emoji.name === '👍' ? colours.GREEN : (messageReaction.emoji.name === '👎' ? colours.RED : colours.ORANGE),
+                author: {
+                    name: `Ticket number #${`${ticketNumber}`.padStart(5, '0')}`,
+                    iconURL: member?.user.displayAvatarURL()
+                },
+                fields: [{
+                    name: 'Username',
+                    value: member?.user.username,
+                    inline: true
+                }, {
+                    name: 'Discriminator',
+                    value: member?.user.discriminator,
+                    inline: true
+                }, {
+                    name: 'Default avatar',
+                    value: member?.user.displayAvatarURL() ? 'Yes' : 'No',
+                    inline: true
+                }, {
+                    name: 'ID',
+                    value: memberId,
+                    inline: true
+                }, {
+                    name: 'Ticket number',
+                    value: ticketNumber,
+                    inline: true
+                }, {
+                    name: 'State',
+                    value: messageReaction.emoji.name === '👍' ? 'approved' : (messageReaction.emoji.name === '👎' ? 'denied' : 'pending redo'),
+                    inline: true
+                }]
+            }));
+
+            // Delete the queued verification message
+            await messageReaction.message.delete();
+            return;
         }
 
         // Reset verification
