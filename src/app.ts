@@ -291,7 +291,7 @@ export const start = async () => {
                 }
 
                 // Set the roles verified members get
-                if (command === 'set-verfied-roles') {
+                if (command === 'set-verified-roles') {
                     // Make sure we have the roles we're asking for
                     const roles = message.mentions.roles
                         .map(role => message.guild!.roles.cache.find(cachedRole => cachedRole.id === role.id)?.id)
@@ -307,7 +307,7 @@ export const start = async () => {
                     guilds.set(message.guild.id, roles, 'roles');
                     await message.channel.send(new MessageEmbed({
                         color: colours.GREEN,
-                        description: `Verfied roles set to \`${roles.join(' ')}\`!`
+                        description: `Verified roles set to \`${roles.join(' ')}\`!`
                     }));
                     return;
                 }
