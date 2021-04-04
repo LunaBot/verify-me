@@ -81,8 +81,8 @@ const waitForQuestions = async (originalMessage: Message, userId: string, guildI
     const collected = await channel.awaitMessages(m => m.author.id === userId, {
         // Only collect a single message at a time
         max: 1,
-        // One minute
-        time: 60 * 1000,
+        // 10 minutes
+        time: 10 * 60 * 1000,
         errors: ['time']
     }).then(response => response.first()).catch(async () => {
         members.set(`${guildId}_${userId}`, 'closed', 'state');
