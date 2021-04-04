@@ -45,7 +45,7 @@ module.exports = {
 		production: {
 			...commonDeploy,
 			path: '/home/xo/code/lunabot/verify-me/production',
-			'post-deploy': 'pnpm install && npm run build && pm2 startOrGracefulReload ecosystem.config.js --env dev'
+			'post-deploy': 'pnpm install && npm run build && pm2 startOrGracefulReload ecosystem.config.js --env production'
 		}
 	}
 };
