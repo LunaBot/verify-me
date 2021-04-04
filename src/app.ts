@@ -463,7 +463,7 @@ export const start = async () => {
                     inline: true
                 }, {
                     name: 'Default avatar',
-                    value: member?.user.displayAvatarURL() ? 'Yes' : 'No',
+                    value: !member?.user.avatar ? 'Yes' : 'No',
                     inline: true
                 }, {
                     name: 'ID',
@@ -566,7 +566,7 @@ export const start = async () => {
                 inline: true
             }, {
                 name: 'Default avatar',
-                value: member?.user.displayAvatarURL() ? 'Yes' : 'No',
+                value: !member?.user.avatar ? 'Yes' : 'No',
                 inline: true
             }, {
                 name: 'ID',
