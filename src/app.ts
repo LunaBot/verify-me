@@ -526,8 +526,11 @@ export const start = async () => {
         // Get current ticket number
         const ticketNumber: number = (guilds.inc(messageReaction.message.guild!.id, 'ticketNumber') as any).get(messageReaction.message.guild!.id).ticketNumber;
 
+        // Get member
+        const member = messageReaction.message.guild?.members.cache.get(user.id);
+
         // Log ticket open
-        logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'OPEN');
+        logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'OPEN', `${member?.user.username}#${member?.user.discriminator}`);
 
         // Send a DM to the user
         const message = await user.send(new MessageEmbed({
@@ -541,9 +544,6 @@ export const start = async () => {
                 Type \`!cancel\` to exit.
             `
         }));
-
-        // Get member
-        const member = messageReaction.message.guild?.members.cache.get(user.id);
 
         // Get audit-log channel
         const auditLogChannelId = guilds.get(messageReaction.message.guild?.id!, 'auditLogChannel');
