@@ -563,6 +563,10 @@ export const start = async () => {
             },
             formatter: (message: Message) => parseInt(message.content, 10)
         }, {
+            text: 'Are you wanting to sell adult content in this server?',
+            validator: (message: Message) => ['yes', 'no', '1', '0', 'true', 'false', 'yep', 'okay', 'nah', 'nope'].includes(message.content.trim().toLowerCase()),
+            formatter: (message: Message) => ['yes', 'okay', '0', 'true'].includes(message.content.trim().toLowerCase())
+        }, {
             text: `Please send a photo of yourself holding a piece of paper with today's date, the text "I'm joining the lobby" and your **DISCORD** username.`,
             validator: (message: Message) => message.attachments.size === 1,
             formatter: (message: Message) => message.attachments.first()?.url
@@ -624,12 +628,16 @@ export const start = async () => {
                 value: user.id,
                 inline: true
             }, {
+                name: 'Seller?',
+                value: replies[2] ? 'Yes' : 'No',
+                inline: true
+            }, {
                 name: 'Ticket number',
                 value: ticketNumber,
                 inline: true
             }],
             image: {
-                url: replies[2]
+                url: replies[3]
             }
         }));
 
