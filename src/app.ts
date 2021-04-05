@@ -22,6 +22,7 @@ const colours = {
 const guildsDefaultOptions = {
     prefix: '!',
     adminRole: 'Admin',
+    announcementChannel: null,
     auditLogChannel: null,
     queueChannel: null,
     verificationMessage: null,
@@ -362,6 +363,24 @@ export const start = async () => {
 
                 // Log ticket approved
                 logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'APPROVED');
+
+                await guilds.ensure('announcementChannel', guildsDefaultOptions.announcementChannel);
+
+                // Mention the user in the chat channel
+                const announcementChannelId = await guilds.get(messageReaction.message.guild.id, 'announcementChannel');
+                const announcementChannel = messageReaction.message.guild.channels.cache.get(announcementChannelId);
+
+                // Post announcement that the member was approved
+                if (isTextBasedChannel(announcementChannel)) {
+                    const randomGreeting = [
+                        'Welcome {user} to the lobby!',
+                        'Hey! {user} finally joined!',
+                        'OMG it\'s {user}',
+                        'Everyone give a warm welcome to {user}'
+                    ];
+                    const greeting = randomGreeting[Math.floor(Math.random() * randomGreeting.length)];
+                    await announcementChannel.send(greeting.replace('{user}', `<@${member?.id}>`));
+                }
 
                 // Let the member know
                 await member?.send(new MessageEmbed({
