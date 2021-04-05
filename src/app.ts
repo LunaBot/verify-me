@@ -352,7 +352,7 @@ export const start = async () => {
                 if (roles.length === 0) return;
 
                 // Try to add all the roles to the member
-                await Promise.all(roles.map(role => member?.roles.add(role)));
+                await Promise.all(roles.map(role => member.roles.add(role)));
 
                 // Get ticket number
                 const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
@@ -504,6 +504,9 @@ export const start = async () => {
         // Remove the reaction
         await messageReaction.users.remove(user.id);
 
+        // Get member
+        const member = messageReaction.message.guild?.members.cache.get(user.id);
+
         // Don't allow people to verify twice
         if (members.get(`${messageReaction.message.guild?.id}_${user.id}`, 'state') === 'verified') {
             // Get role to add to member
@@ -538,9 +541,6 @@ export const start = async () => {
 
         // Get current ticket number
         const ticketNumber: number = (guilds.inc(messageReaction.message.guild!.id, 'ticketNumber') as any).get(messageReaction.message.guild!.id).ticketNumber;
-
-        // Get member
-        const member = messageReaction.message.guild?.members.cache.get(user.id);
 
         // Log ticket open
         logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'OPEN', `${member?.user.username}#${member?.user.discriminator}`);
