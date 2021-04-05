@@ -49,6 +49,23 @@ const members = new EnhancedMap({
         state: null
     }
 });
+
+type TicketState = 'open' | 'pending' | 'pending redo' | 'closed' | 'verified' | 'denied';
+const tickets = new EnhancedMap({
+    name: 'tickets',
+    fetchAll: false,
+    autoFetch: true,
+    cloneLevel: 'deep',
+    // @ts-expect-error
+    autoEnsure: {
+        /** @type {TicketState} */
+        state: null,
+        /** @type {string} */
+        member: null,
+        /** @type {number} */
+        step: null
+    }
+});
 const watchedMessages = new EnhancedMap('watched-messages');
 
 interface Question {
@@ -60,14 +77,91 @@ interface Question {
     failureMessage?: string;
 };
 
-const waitForQuestions = async (originalMessage: Message, userId: string, guildId: string, channel: TextChannel, questions: Question[], index: number = 0, results: any[] = []): Promise<any[]> => {
+const client = new Client();
+
+interface SendAuditLogMessageOptions {
+    // Guild for the audit log
+    guildId: string;
+    // Which ticket this concerns
+    ticketNumber: number;
+    // What colour you want the embed
+    colour: keyof typeof colours;
+};
+
+const sendAuditLogMessage = async (options: SendAuditLogMessageOptions) => {
+    // Get ticket
+    const ticket = tickets.get(`${options.guildId}_${options.ticketNumber}`);
+
+    // Non existant ticket?
+    if (!ticket) return;
+
+    // Get guild
+    const guild = client.guilds.cache.get(options.guildId)!;
+
+    // Get member
+    const member = guild.members.cache.get(ticket.member);
+
+    // Non exitant member?
+    if (!member) return;
+
+    // Create embed
+    const embed = new MessageEmbed({
+        color: options.colour,
+        author: {
+            name: `Ticket number #${`${options.ticketNumber}`.padStart(5, '0')}`,
+            iconURL: member?.user.displayAvatarURL({ format: 'png' })
+        },
+        fields: [{
+            name: 'Username',
+            value: member?.user.username,
+            inline: true
+        }, {
+            name: 'Discriminator',
+            value: member?.user.discriminator,
+            inline: true
+        }, {
+            name: 'Default avatar',
+            value: !member?.user.avatar ? 'Yes' : 'No',
+            inline: true
+        }, {
+            name: 'ID',
+            value: member.id,
+            inline: true
+        }, {
+            name: 'Ticket number',
+            value: options.ticketNumber,
+            inline: true
+        }, {
+            name: 'Current state',
+            value: ticket.state,
+            inline: true
+        }, {
+            name: 'Step',
+            value: ticket.step,
+            inline: true
+        }]
+    });
+
+    // Get audit-log channel
+    const auditLogChannelId = guilds.get(guild.id, 'auditLogChannel');
+    const auditLogChannel = guild?.channels.cache.find(channel => channel.id === auditLogChannelId) as TextChannel;
+
+    // Post in audit-log
+    await auditLogChannel.send(embed);
+};
+
+const waitForQuestions = async (ticketNumber: number, originalMessage: Message, userId: string, guildId: string, channel: TextChannel, questions: Question[], index: number = 0, results: any[] = []): Promise<any[]> => {
+    // Get the current question
     const question = questions[index];
+
+    // Mark which step we're on
+    tickets.set(`${guildId}_${ticketNumber}`, index, 'step');
 
     // Return results when done
     if (!question) return results;
 
     // Check if we can skip this question
-    if (question.canSkipCheck && question.canSkipCheck(originalMessage)) return waitForQuestions(originalMessage, userId, guildId, channel, questions, index + 1, {
+    if (question.canSkipCheck && question.canSkipCheck(originalMessage)) return waitForQuestions(ticketNumber, originalMessage, userId, guildId, channel, questions, index + 1, {
         ...results,
         [index]: question.formatter(originalMessage)
     });
@@ -94,10 +188,11 @@ const waitForQuestions = async (originalMessage: Message, userId: string, guildI
     });
 
     // Timed-out
-    if (!collected) return waitForQuestions(originalMessage, userId, guildId, channel, questions, index + 1, results);
+    if (!collected) return waitForQuestions(ticketNumber, originalMessage, userId, guildId, channel, questions, index + 1, results);
 
     // Cancelled
     if (collected.content.toLowerCase().startsWith('!cancel')) {
+        // Let the user know
         await channel.send(new MessageEmbed({
             author: {
                 name: '❌ Verification cancelled!'
@@ -118,19 +213,17 @@ const waitForQuestions = async (originalMessage: Message, userId: string, guildI
         }));
 
         // Resend question
-        return waitForQuestions(originalMessage, userId, guildId, channel, questions, index, results);
+        return waitForQuestions(ticketNumber, originalMessage, userId, guildId, channel, questions, index, results);
     }
 
-    return waitForQuestions(originalMessage, userId, guildId, channel, questions, index + 1, {
+    return waitForQuestions(ticketNumber, originalMessage, userId, guildId, channel, questions, index + 1, {
         ...results,
         [index]: question.formatter(collected)
     });
 };
 
 export const start = async () => {
-    const client = new Client();
-
-    client.on('ready', () => {
+    client.on('ready', () => {        
         logger.info('BOT:READY');
     });
 
@@ -333,11 +426,6 @@ export const start = async () => {
                 }
             }
         }
-
-        // Unknown command?
-        await message.channel.send(new MessageEmbed({
-            description: `Unknown command "${command}"`
-        }));
     });
 
     client.on('messageReactionAdd', async (messageReaction, user) => {
@@ -458,68 +546,42 @@ export const start = async () => {
                 // Log ticket denied
                 logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'DENIED');
 
-                // Let the member know
-                await member?.send(new MessageEmbed({
-                    author: {
-                        name: '🚀 Verification denied!'
-                    },
-                    fields: [{
-                        name: 'Guild',
-                        value: messageReaction.message.guild.name
-                    }, {
-                        name: 'Ticket #',
-                        value: `${ticketNumber}`.padStart(5, '0')
-                    }],
-                    description: 'Your verification was denied!'
-                }));
+                try {
+                    // Let the member know
+                    await member?.send(new MessageEmbed({
+                        author: {
+                            name: '🚀 Verification denied!'
+                        },
+                        fields: [{
+                            name: 'Guild',
+                            value: messageReaction.message.guild.name
+                        }, {
+                            name: 'Ticket #',
+                            value: `${ticketNumber}`.padStart(5, '0')
+                        }],
+                        description: 'Your verification was denied!'
+                    }));
 
-                // Wait 1s
-                await sleep(1000);
+                    // Wait 1s
+                    await sleep(1000);
 
-                // Kick the member
-                await member?.kick();
+                    // Kick the member
+                    await member?.kick();
+                } catch {
+                    // Member likely either left or was kicked before this
+                    logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'MEMBER_LEFT');
+                }
             }
 
-            // Get audit-log channel
-            const auditLogChannelId = guilds.get(messageReaction.message.guild?.id!, 'auditLogChannel');
-            const auditLogChannel = messageReaction.message.guild?.channels.cache.find(channel => channel.id === auditLogChannelId) as TextChannel;
-
             // Get ticket number
-            const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
+            const ticketNumber = parseInt(messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value ?? '', 10);
 
-            // Post in audit-log
-            await auditLogChannel.send(new MessageEmbed({
-                color: messageReaction.emoji.name === '👍' ? colours.GREEN : (messageReaction.emoji.name === '👎' ? colours.RED : colours.ORANGE),
-                author: {
-                    name: `Ticket number #${`${ticketNumber}`.padStart(5, '0')}`,
-                    iconURL: member?.user.displayAvatarURL({ format: 'png' })
-                },
-                fields: [{
-                    name: 'Username',
-                    value: member?.user.username,
-                    inline: true
-                }, {
-                    name: 'Discriminator',
-                    value: member?.user.discriminator,
-                    inline: true
-                }, {
-                    name: 'Default avatar',
-                    value: !member?.user.avatar ? 'Yes' : 'No',
-                    inline: true
-                }, {
-                    name: 'ID',
-                    value: memberId,
-                    inline: true
-                }, {
-                    name: 'Ticket number',
-                    value: ticketNumber,
-                    inline: true
-                }, {
-                    name: 'State',
-                    value: messageReaction.emoji.name === '👍' ? 'approved' : (messageReaction.emoji.name === '👎' ? 'denied' : 'pending redo'),
-                    inline: true
-                }]
-            }));
+            // Send audit-log message
+            await sendAuditLogMessage({
+                colour: messageReaction.emoji.name === '👍' ? 'GREEN' : (messageReaction.emoji.name === '👎' ? 'RED' : 'ORANGE'),
+                guildId: messageReaction.message.guild?.id,
+                ticketNumber
+            });
 
             // Delete the queued verification message
             await messageReaction.message.delete();
@@ -667,7 +729,7 @@ export const start = async () => {
         }];
 
         // Wait for verification
-        const replies = await waitForQuestions(message, user.id, message.guild?.id!, message.channel as TextChannel, questions);
+        const replies = await waitForQuestions(ticketNumber, message, user.id, message.guild?.id!, message.channel as TextChannel, questions);
 
         // Get the guild's queue channel id
         const queueChannelId = guilds.get(messageReaction.message.guild?.id!, 'queueChannel');
