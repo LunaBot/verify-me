@@ -290,6 +290,26 @@ export const start = async () => {
                     return;
                 }
 
+                // Set the verification announcement channel
+                if (command === 'set-announcement-channel') {
+                    // Make sure we have the channel we're asking for
+                    const channel = message.guild.channels.cache.find(channel => channel.id === message.mentions.channels.first()?.id ?? args[0]);
+                    if (!channel) {
+                        await message.channel.send(new MessageEmbed({
+                            color: colours.RED,
+                            description: `No channel found for \`${args[0]}\`!`
+                        }));
+                        return;
+                    }
+
+                    guilds.set(message.guild.id, channel.id, 'announcementChannel');
+                    await message.channel.send(new MessageEmbed({
+                        color: colours.GREEN,
+                        description: `Announcement channel set to \`${channel.name}\`!`
+                    }));
+                    return;
+                }
+
                 // Set the roles verified members get
                 if (command === 'set-verified-roles') {
                     // Make sure we have the roles we're asking for
@@ -472,7 +492,7 @@ export const start = async () => {
                 color: messageReaction.emoji.name === '👍' ? colours.GREEN : (messageReaction.emoji.name === '👎' ? colours.RED : colours.ORANGE),
                 author: {
                     name: `Ticket number #${`${ticketNumber}`.padStart(5, '0')}`,
-                    iconURL: member?.user.displayAvatarURL({ format: 'gif' }) ?? member?.user.displayAvatarURL({ format: 'png' })
+                    iconURL: member?.user.displayAvatarURL({ format: 'png' })
                 },
                 fields: [{
                     name: 'Username',
