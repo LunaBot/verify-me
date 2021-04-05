@@ -339,6 +339,9 @@ export const start = async () => {
             // Get member
             const member = messageReaction.message.guild.members.cache.get(memberId!);
 
+            // Couldn't find the associated member
+            if (!member) return;
+
             // Approved
             if (messageReaction.emoji.name === '👍') {
                 // Get role to add to member
@@ -450,7 +453,7 @@ export const start = async () => {
                 color: messageReaction.emoji.name === '👍' ? colours.GREEN : (messageReaction.emoji.name === '👎' ? colours.RED : colours.ORANGE),
                 author: {
                     name: `Ticket number #${`${ticketNumber}`.padStart(5, '0')}`,
-                    iconURL: member?.user.displayAvatarURL()
+                    iconURL: member?.user.displayAvatarURL({ format: 'gif' }) ?? member?.user.displayAvatarURL({ format: 'png' })
                 },
                 fields: [{
                     name: 'Username',
@@ -503,6 +506,17 @@ export const start = async () => {
 
         // Don't allow people to verify twice
         if (members.get(`${messageReaction.message.guild?.id}_${user.id}`, 'state') === 'verified') {
+            // Get role to add to member
+            const roleIds = guilds.get(messageReaction.message.guild?.id!, 'roles');
+            const roles = roleIds.map(roleId => messageReaction.message.guild?.roles.cache.get(roleId)).filter(role => role);
+
+            // Make sure the role exists
+            if (roles.length === 0) return;
+
+            // Try to add all the roles to the member
+            await Promise.all(roles.map(role => member?.roles.add(role)));
+
+            // Let them know they're already verified
             await user.send(new MessageEmbed({
                 description: '❌ You\'re already verified!',
                 color: colours.RED
