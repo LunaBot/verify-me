@@ -85,7 +85,6 @@ const waitForQuestions = async (originalMessage: Message, userId: string, guildI
         time: 10 * 60 * 1000,
         errors: ['time']
     }).then(response => response.first()).catch(async () => {
-        members.set(`${guildId}_${userId}`, 'closed', 'state');
         await channel.send(new MessageEmbed({
             author: {
                 name: '⌛ Verification timed out!'
@@ -350,7 +349,7 @@ export const start = async () => {
                 if (roles.length === 0) return;
 
                 // Try to add all the roles to the member
-                await Promise.allSettled(roles.map(role => member?.roles.add(role)));
+                await Promise.all(roles.map(role => member?.roles.add(role)));
 
                 // Get ticket number
                 const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
@@ -359,7 +358,7 @@ export const start = async () => {
                 members.set(`${messageReaction.message.guild?.id}_${member?.id}`, 'verified', 'state');
 
                 // Log ticket approved
-                logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'APPROVED');
+                logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'APPROVED');
 
                 // Let the member know
                 await member?.send(new MessageEmbed({
@@ -636,8 +635,12 @@ export const start = async () => {
 
         // Timed-out or cancelled
         if (Object.values(replies).length < questions.length) {
+            // Set state to closed
+            members.set(`${member?.guild.id}_${user.id}`, 'closed', 'state');
+
             // Log ticket timed-out
-            logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'TIMED_OUT_OR_CANCEL');
+            logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'TIMED_OUT_OR_CANCEL');
+
             return;
         }
 
@@ -645,7 +648,7 @@ export const start = async () => {
         members.set(`${messageReaction.message.guild?.id}_${user.id}`, 'pending', 'state');
 
         // Log ticket pending
-        logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'PENDING');
+        logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'PENDING');
 
         // Send message to queue channel for mods/admins to verify
         const verification = await queueChannel.send(new MessageEmbed({
