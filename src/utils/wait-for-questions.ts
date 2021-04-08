@@ -2,10 +2,18 @@ import { Message, MessageEmbed, TextChannel } from "discord.js";
 import { store } from "../store";
 import { colours } from "utils";
 import type { Question } from "../types";
+import { logger } from "../logger";
+import { client } from "../client";
 
 export const waitForQuestions = async (ticketNumber: number, originalMessage: Message, userId: string, guildId: string, channel: TextChannel, questions: Question[], index: number = 0, results: any[] = []): Promise<any[]> => {
     // Get the current question
     const question = questions[index];
+
+    // Get the user for this question
+    const user = client.users.cache.get(userId) ?? await client.users.fetch(userId);
+
+    // Log which step were on
+    logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, `STEP:${index}`, `${user.username}#${user.discriminator}`);
 
     // Mark which step we're on
     store.tickets.set(`${guildId}_${ticketNumber}`, index, 'step');
