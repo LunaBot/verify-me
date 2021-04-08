@@ -5,6 +5,12 @@ import { logger } from '../logger';
 import { store, guildsDefaultOptions } from '../store';
 
 export const onMessageReactionAdd = async function onMessageReactionAdd(reaction: MessageReaction, user: User) {
+    // Get whole reaction
+    if (reaction.partial) await reaction.fetch();
+
+    // Get whole user
+    if (user.partial) await user.fetch();
+
     // Only process messages we care about
     if (!store.watchedMessages.has(reaction.message.id)) {
         // Log message reacted to
@@ -12,11 +18,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
         return;
     }
 
-    // Get whole reaction
-    if (reaction.partial) await reaction.fetch();
-
-    // Get whole user
-    if (user.partial) await user.fetch();
+    logger.debug(`REACTION_ADD:${reaction.message.id}`, `${user.username}#${user.discriminator}`);
 
     // If we're in the queue channel then make sure it's an admin, if so then they're likely allowing/denying a verification
     // @ts-expect-error
