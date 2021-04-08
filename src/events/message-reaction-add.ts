@@ -72,21 +72,26 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
                 await announcementChannel.send(greeting.replace('{user}', `<@${member?.id}>`));
             }
 
-            // Let the member know
-            await member?.send(new MessageEmbed({
-                color: colours.GREEN,
-                author: {
-                    name: '🚀 Verification approved!'
-                },
-                fields: [{
-                    name: 'Guild',
-                    value: reaction.message.guild.name
-                }, {
-                    name: 'Ticket #',
-                    value: `${ticketNumber}`.padStart(5, '0')
-                }],
-                description: 'Your verification was approved!'
-            }));
+            try {
+                // Let the member know
+                await member?.send(new MessageEmbed({
+                    color: colours.GREEN,
+                    author: {
+                        name: '🚀 Verification approved!'
+                    },
+                    fields: [{
+                        name: 'Guild',
+                        value: reaction.message.guild.name
+                    }, {
+                        name: 'Ticket #',
+                        value: `${ticketNumber}`.padStart(5, '0')
+                    }],
+                    description: 'Your verification was approved!'
+                }));
+            } catch {
+                // Member likely either left or was kicked before this
+                logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'MEMBER_LEFT');
+            }
         }
 
         // Redo
@@ -100,21 +105,26 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
             // Log ticket redo
             logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'REDO');
 
-            // Let the member know
-            await member?.send(new MessageEmbed({
-                color: colours.RED,
-                author: {
-                    name: '🚀 Verification denied!'
-                },
-                fields: [{
-                    name: 'Guild',
-                    value: reaction.message.guild.name
-                }, {
-                    name: 'Ticket #',
-                    value: `${ticketNumber}`.padStart(5, '0')
-                }],
-                description: 'Don\'t worry though as you\'re able to redo it, just visit the server where you applied and retry.'
-            }));
+            try {
+                // Let the member know
+                await member?.send(new MessageEmbed({
+                    color: colours.RED,
+                    author: {
+                        name: '🚀 Verification denied!'
+                    },
+                    fields: [{
+                        name: 'Guild',
+                        value: reaction.message.guild.name
+                    }, {
+                        name: 'Ticket #',
+                        value: `${ticketNumber}`.padStart(5, '0')
+                    }],
+                    description: 'Don\'t worry though as you\'re able to redo it, just visit the server where you applied and retry.'
+                }));
+            } catch {
+                // Member likely either left or was kicked before this
+                logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'MEMBER_LEFT');
+            }
         }
 
         // Denied
