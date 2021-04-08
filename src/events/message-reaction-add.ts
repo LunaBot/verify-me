@@ -12,11 +12,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
     if (user.partial) await user.fetch();
 
     // Only process messages we care about
-    if (!store.watchedMessages.has(reaction.message.id)) {
-        // Log message reacted to
-        logger.debug(`INVALID_REACTION_ADD:${reaction.message.id}`, `${user.username}#${user.discriminator}`);
-        return;
-    }
+    if (!store.watchedMessages.has(reaction.message.id)) return;
 
     logger.debug(`REACTION_ADD:${reaction.message.id}`, `${user.username}#${user.discriminator}`);
 
