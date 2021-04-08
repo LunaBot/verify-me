@@ -1,10 +1,10 @@
 import dedent from 'dedent';
 import { colours, isTextBasedChannel, sendAuditLogMessage, sleep, waitForQuestions } from '../utils';
-import { DMChannel, Message, MessageEmbed, TextChannel } from 'discord.js';
+import { DMChannel, Message, MessageEmbed, MessageReaction, TextChannel, User } from 'discord.js';
 import { logger } from '../logger';
 import { store, guildsDefaultOptions } from '../store';
 
-export const onMessageReactionAdd = async function onMessageReactionAdd(messageReaction, user) {
+export const onMessageReactionAdd = async function onMessageReactionAdd(messageReaction: MessageReaction, user: User) {
     // Only process messages we care about
     if (!store.watchedMessages.has(messageReaction.message.id)) return;
 
@@ -12,7 +12,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
     if (user.partial) await user.fetch();
 
     // Log message reacted to
-    logger.debug(`MESSAGE_REACTION_ADD:${messageReaction.id}`, `${user.username}#${user.discriminator}`);
+    logger.debug(`MESSAGE_REACTION_ADD:${messageReaction.message.id}`, `${user.username}#${user.discriminator}`);
 
     // If we're in the queue channel then make sure it's an admin, if so then they're likely allowing/denying a verification
     // @ts-expect-error
