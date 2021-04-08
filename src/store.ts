@@ -17,7 +17,12 @@ const tickets = new EnhancedMap({
     }
 });
 
-const watchedMessages = new EnhancedMap('watched-messages');
+const watchedMessages = new EnhancedMap({
+    name: 'watched-messages',
+    fetchAll: true,
+    autoFetch: true,
+    cloneLevel: 'deep'
+});
 
 export const guildsDefaultOptions = {
     prefix: '!',
