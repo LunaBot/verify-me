@@ -11,6 +11,9 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
     // Get whole user
     if (user.partial) await user.fetch();
 
+    // Log message reacted to
+    logger.debug(`MESSAGE_REACTION_ADD:${messageReaction.id}`, `${user.username}#${user.discriminator}`);
+
     // If we're in the queue channel then make sure it's an admin, if so then they're likely allowing/denying a verification
     // @ts-expect-error
     if (messageReaction.message.channel.id === store.guilds.get(messageReaction.message.guild.id!, 'queueChannel')) {
