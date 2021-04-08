@@ -358,6 +358,9 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
         return;
     }
 
+    // Log replies
+    logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'GOT_REPLIES', replies);
+
     // Set verification as pending
     store.members.set(`${reaction.message.guild?.id}_${user.id}`, 'pending', 'state');
 
