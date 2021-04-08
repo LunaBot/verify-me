@@ -1,6 +1,7 @@
 import { Message, MessageEmbed, TextChannel } from "discord.js";
 import { store } from "../store";
 import { colours } from "utils";
+import type { Question } from "../types";
 
 export const waitForQuestions = async (ticketNumber: number, originalMessage: Message, userId: string, guildId: string, channel: TextChannel, questions: Question[], index: number = 0, results: any[] = []): Promise<any[]> => {
     // Get the current question
