@@ -316,8 +316,8 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
         formatter: (message: Message) => ['yes', 'okay', '0', 'true'].includes(message.content.trim().toLowerCase())
     }, {
         text: `Please send a photo of yourself holding a piece of paper with today's date, the text "I'm joining the lobby" and your **DISCORD** username.`,
-        validator: (message: Message) => message.attachments.size === 1,
-        formatter: (message: Message) => message.attachments.first()?.url
+        validator: (message: Message) => message.attachments.find(attachment => attachment.url !== '') !== undefined,
+        formatter: (message: Message) => message.attachments.find(attachment => attachment.url !== '')
     }];
 
     // Wait for verification
