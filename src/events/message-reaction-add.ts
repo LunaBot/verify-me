@@ -4,38 +4,41 @@ import { DMChannel, Message, MessageEmbed, MessageReaction, TextChannel, User } 
 import { logger } from '../logger';
 import { store, guildsDefaultOptions } from '../store';
 
-export const onMessageReactionAdd = async function onMessageReactionAdd(messageReaction: MessageReaction, user: User) {
+export const onMessageReactionAdd = async function onMessageReactionAdd(reaction: MessageReaction, user: User) {
     // Only process messages we care about
-    if (!store.watchedMessages.has(messageReaction.message.id)) return;
+    if (!store.watchedMessages.has(reaction.message.id)) return;
+
+    // Get whole reaction
+    if (reaction.partial) await reaction.fetch();
 
     // Get whole user
     if (user.partial) await user.fetch();
 
     // Log message reacted to
-    logger.debug(`MESSAGE_REACTION_ADD:${messageReaction.message.id}`, `${user.username}#${user.discriminator}`);
+    logger.debug(`MESSAGE_REACTION_ADD:${reaction.message.id}`, `${user.username}#${user.discriminator}`);
 
     // If we're in the queue channel then make sure it's an admin, if so then they're likely allowing/denying a verification
     // @ts-expect-error
-    if (messageReaction.message.channel.id === store.guilds.get(messageReaction.message.guild.id!, 'queueChannel')) {
+    if (reaction.message.channel.id === store.guilds.get(reaction.message.guild.id!, 'queueChannel')) {
         // Bail if it's not an admin
-        if (!messageReaction.message.guild?.members.cache.get(user.id)?.roles.cache.find(role => role.id === store.guilds.get(messageReaction.message.guild?.id!, 'adminRole'))) return;
+        if (!reaction.message.guild?.members.cache.get(user.id)?.roles.cache.find(role => role.id === store.guilds.get(reaction.message.guild?.id!, 'adminRole'))) return;
         // Attempt to get the member ID
-        const memberId = messageReaction.message.embeds[0].fields.find(field => field.name === 'ID')?.value;
+        const memberId = reaction.message.embeds[0].fields.find(field => field.name === 'ID')?.value;
 
         // Make sure this is one of our embeds
         if (!memberId) return;
 
         // Get member
-        const member = messageReaction.message.guild.members.cache.get(memberId!);
+        const member = reaction.message.guild.members.cache.get(memberId!);
 
         // Couldn't find the associated member
         if (!member) return;
 
         // Approved
-        if (messageReaction.emoji.name === '👍') {
+        if (reaction.emoji.name === '👍') {
             // Get role to add to member
-            const roleIds = store.guilds.get(messageReaction.message.guild?.id!, 'roles');
-            const roles = roleIds.map(roleId => messageReaction.message.guild?.roles.cache.get(roleId)).filter(role => role);
+            const roleIds = store.guilds.get(reaction.message.guild?.id!, 'roles');
+            const roles = roleIds.map(roleId => reaction.message.guild?.roles.cache.get(roleId)).filter(role => role);
 
             // Make sure the role exists
             if (roles.length === 0) return;
@@ -44,10 +47,10 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
             await Promise.all(roles.map(role => member.roles.add(role)));
 
             // Get ticket number
-            const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
+            const ticketNumber = reaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
 
             // Mark verified
-            store.members.set(`${messageReaction.message.guild?.id}_${member?.id}`, 'verified', 'state');
+            store.members.set(`${reaction.message.guild?.id}_${member?.id}`, 'verified', 'state');
 
             // Log ticket approved
             logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'APPROVED');
@@ -55,8 +58,8 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
             await store.guilds.ensure('announcementChannel', guildsDefaultOptions.announcementChannel);
 
             // Mention the user in the chat channel
-            const announcementChannelId = await store.guilds.get(messageReaction.message.guild.id, 'announcementChannel');
-            const announcementChannel = messageReaction.message.guild.channels.cache.get(announcementChannelId);
+            const announcementChannelId = await store.guilds.get(reaction.message.guild.id, 'announcementChannel');
+            const announcementChannel = reaction.message.guild.channels.cache.get(announcementChannelId);
 
             // Post announcement that the member was approved
             if (isTextBasedChannel(announcementChannel)) {
@@ -78,7 +81,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
                 },
                 fields: [{
                     name: 'Guild',
-                    value: messageReaction.message.guild.name
+                    value: reaction.message.guild.name
                 }, {
                     name: 'Ticket #',
                     value: `${ticketNumber}`.padStart(5, '0')
@@ -88,12 +91,12 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
         }
 
         // Redo
-        if (messageReaction.emoji.name === '🔁') {
+        if (reaction.emoji.name === '🔁') {
             // Get ticket number
-            const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
+            const ticketNumber = reaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
 
             // Reset member's state
-            store.members.set(`${messageReaction.message.guild?.id}_${member?.id}`, 'closed', 'state');
+            store.members.set(`${reaction.message.guild?.id}_${member?.id}`, 'closed', 'state');
 
             // Log ticket redo
             logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'REDO');
@@ -106,7 +109,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
                 },
                 fields: [{
                     name: 'Guild',
-                    value: messageReaction.message.guild.name
+                    value: reaction.message.guild.name
                 }, {
                     name: 'Ticket #',
                     value: `${ticketNumber}`.padStart(5, '0')
@@ -116,12 +119,12 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
         }
 
         // Denied
-        if (messageReaction.emoji.name === '👎') {
+        if (reaction.emoji.name === '👎') {
             // Get ticket number
-            const ticketNumber = messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
+            const ticketNumber = reaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
 
             // Ensure the user can't apply again
-            store.members.set(`${messageReaction.message.guild?.id}_${member?.id}`, 'denied', 'state');
+            store.members.set(`${reaction.message.guild?.id}_${member?.id}`, 'denied', 'state');
 
             // Log ticket denied
             logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'DENIED');
@@ -134,7 +137,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
                     },
                     fields: [{
                         name: 'Guild',
-                        value: messageReaction.message.guild.name
+                        value: reaction.message.guild.name
                     }, {
                         name: 'Ticket #',
                         value: `${ticketNumber}`.padStart(5, '0')
@@ -154,27 +157,27 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
         }
 
         // Get ticket number
-        const ticketNumber = parseInt(messageReaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value ?? '', 10);
+        const ticketNumber = parseInt(reaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value ?? '', 10);
 
         // Send audit-log message
         await sendAuditLogMessage({
-            colour: messageReaction.emoji.name === '👍' ? 'GREEN' : (messageReaction.emoji.name === '👎' ? 'RED' : 'ORANGE'),
-            guildId: messageReaction.message.guild?.id,
+            colour: reaction.emoji.name === '👍' ? 'GREEN' : (reaction.emoji.name === '👎' ? 'RED' : 'ORANGE'),
+            guildId: reaction.message.guild?.id,
             ticketNumber
         });
 
         // Delete the queued verification message
-        await messageReaction.message.delete();
+        await reaction.message.delete();
         return;
     }
 
     // Reset verification
-    if (messageReaction.emoji.name === '🔄') {
-        store.members.set(`${messageReaction.message.guild?.id}_${user.id}`, 'closed', 'state');
+    if (reaction.emoji.name === '🔄') {
+        store.members.set(`${reaction.message.guild?.id}_${user.id}`, 'closed', 'state');
     }
 
     // Don't allow people to open a second if they already have a verification running
-    if (store.members.get(`${messageReaction.message.guild?.id}_${user.id}`, 'state') === 'open') {
+    if (store.members.get(`${reaction.message.guild?.id}_${user.id}`, 'state') === 'open') {
         await user.send(new MessageEmbed({
             description: '❌ You already have a verification ticket open!',
             color: colours.RED
@@ -183,16 +186,16 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
     }
 
     // Remove the reaction
-    await messageReaction.users.remove(user.id);
+    await reaction.users.remove(user.id);
 
     // Get member
-    const member = messageReaction.message.guild?.members.cache.get(user.id);
+    const member = reaction.message.guild?.members.cache.get(user.id);
 
     // Don't allow people to verify twice
-    if (store.members.get(`${messageReaction.message.guild?.id}_${user.id}`, 'state') === 'verified') {
+    if (store.members.get(`${reaction.message.guild?.id}_${user.id}`, 'state') === 'verified') {
         // Get role to add to member
-        const roleIds = store.guilds.get(messageReaction.message.guild?.id!, 'roles');
-        const roles = roleIds.map(roleId => messageReaction.message.guild?.roles.cache.get(roleId)).filter(role => role);
+        const roleIds = store.guilds.get(reaction.message.guild?.id!, 'roles');
+        const roles = roleIds.map(roleId => reaction.message.guild?.roles.cache.get(roleId)).filter(role => role);
 
         // Make sure the role exists
         if (roles.length === 0) return;
@@ -209,7 +212,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
     }
 
     // Don't allow people to verify while they have a verification pending
-    if (store.members.get(`${messageReaction.message.guild?.id}_${user.id}`, 'state') === 'pending') {
+    if (store.members.get(`${reaction.message.guild?.id}_${user.id}`, 'state') === 'pending') {
         await user.send(new MessageEmbed({
             description: '❌ Your verification has already been submitted to the queue, please wait!',
             color: colours.RED
@@ -218,10 +221,10 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
     }
 
     // Set message state to open
-    store.members.set(`${messageReaction.message.guild?.id}_${user.id}`, 'open', 'state');
+    store.members.set(`${reaction.message.guild?.id}_${user.id}`, 'open', 'state');
 
     // Get current ticket number
-    const ticketNumber: number = (store.guilds.inc(messageReaction.message.guild!.id, 'ticketNumber') as any).get(messageReaction.message.guild!.id).ticketNumber;
+    const ticketNumber: number = (store.guilds.inc(reaction.message.guild!.id, 'ticketNumber') as any).get(reaction.message.guild!.id).ticketNumber;
 
     // Log ticket open
     logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'OPEN', `${member?.user.username}#${member?.user.discriminator}`);
@@ -240,8 +243,8 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
     }));
 
     // Get audit-log channel
-    const auditLogChannelId = store.guilds.get(messageReaction.message.guild?.id! as string, 'auditLogChannel');
-    const auditLogChannel = messageReaction.message.guild?.channels.cache.find(channel => channel.id === auditLogChannelId) as TextChannel;
+    const auditLogChannelId = store.guilds.get(reaction.message.guild?.id! as string, 'auditLogChannel');
+    const auditLogChannel = reaction.message.guild?.channels.cache.find(channel => channel.id === auditLogChannelId) as TextChannel;
 
     // Post in audit-log
     await auditLogChannel.send(new MessageEmbed({
@@ -313,19 +316,19 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
 
     // Check if the ticket was closed while the timeout was still ticking
     // @TODO: Refactor the awaitForMessages so it'll end on member leave
-    if (store.members.get(`${messageReaction.message.guild?.id}_${user.id}`, 'state') === 'closed') {
+    if (store.members.get(`${reaction.message.guild?.id}_${user.id}`, 'state') === 'closed') {
         // Bail since this would already have been noted as closed by whatever closed it
         return;
     }
 
     // Get the guild's queue channel id
-    const queueChannelId = store.guilds.get(messageReaction.message.guild?.id!, 'queueChannel');
+    const queueChannelId = store.guilds.get(reaction.message.guild?.id!, 'queueChannel');
 
     // Send error to the owner
     if (!queueChannelId) {
-        await messageReaction.message.guild?.owner?.send(new MessageEmbed({
+        await reaction.message.guild?.owner?.send(new MessageEmbed({
             author: {
-                name: `❌ No queue channel set in ${messageReaction.message.guild.name}`
+                name: `❌ No queue channel set in ${reaction.message.guild.name}`
             },
             description: 'Use `!set-queue-channel` to set it!'
         }));
@@ -333,7 +336,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
     }
 
     // Get queue channel
-    const queueChannel = messageReaction.message.guild?.channels.cache.find(channel => channel.id === queueChannelId) as TextChannel;
+    const queueChannel = reaction.message.guild?.channels.cache.find(channel => channel.id === queueChannelId) as TextChannel;
 
     // Timed-out or cancelled
     if (Object.values(replies).length < questions.length) {
@@ -347,7 +350,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
     }
 
     // Set verification as pending
-    store.members.set(`${messageReaction.message.guild?.id}_${user.id}`, 'pending', 'state');
+    store.members.set(`${reaction.message.guild?.id}_${user.id}`, 'pending', 'state');
 
     // Log ticket pending
     logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'PENDING');
@@ -356,7 +359,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
     const verification = await queueChannel.send(new MessageEmbed({
         author: {
             name: `Ticket number #${`${ticketNumber}`.padStart(5, '0')}`,
-            iconURL: messageReaction.message.guild?.members.cache.find(member => member.id === user.id)?.user.displayAvatarURL()
+            iconURL: reaction.message.guild?.members.cache.find(member => member.id === user.id)?.user.displayAvatarURL()
         },
         fields: [{
             name: 'Username',
@@ -404,7 +407,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(messageR
         },
         fields: [{
             name: 'Guild',
-            value: messageReaction.message.guild?.name
+            value: reaction.message.guild?.name
         }, {
             name: 'Ticket #',
             value: `${ticketNumber}`.padStart(5, '0')

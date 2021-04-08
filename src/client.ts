@@ -1,3 +1,5 @@
 import { Client } from 'discord.js';
 
-export const client = new Client();
+export const client = new Client({
+    partials: ['MESSAGE', 'REACTION']
+});
