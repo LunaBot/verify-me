@@ -37,8 +37,8 @@ export const waitForQuestions = async (ticketNumber: number, originalMessage: Me
     const collected = await channel.awaitMessages(m => m.author.id === userId, {
         // Only collect a single message at a time
         max: 1,
-        // 2 mins
-        time: 2 * 60 * 1000,
+        // 10 mins
+        time: 10 * 60 * 1000,
         errors: ['time']
     }).then(response => response.first()).catch(async () => {
         await channel.send(new MessageEmbed({
