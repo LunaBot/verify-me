@@ -22,7 +22,7 @@ export const waitForQuestions = async (ticketNumber: number, originalMessage: Me
     if (!question) return results;
 
     // Check if we can skip this question
-    if (question.canSkipCheck && question.canSkipCheck(originalMessage)) return waitForQuestions(ticketNumber, originalMessage, userId, guildId, channel, questions, index + 1, {
+    if (question.canSkipCheck && question.canSkipCheck(originalMessage, results[index-1])) return waitForQuestions(ticketNumber, originalMessage, userId, guildId, channel, questions, index + 1, {
         ...results,
         [index]: question.formatter(originalMessage)
     });
@@ -30,7 +30,7 @@ export const waitForQuestions = async (ticketNumber: number, originalMessage: Me
     // Ask question
     await channel.send(new MessageEmbed({
         color: colours.BLURPLE,
-        description: `${question.emoji ?? '❓'} ${question.text}`
+        description: `${question.emoji ?? '❓'} ${typeof question.text === 'string' ? question.text : question.text(questions[index-1])}`
     }));
 
     // Wait for answer
@@ -64,12 +64,15 @@ export const waitForQuestions = async (ticketNumber: number, originalMessage: Me
         return results;
     }
 
+    // Check if response is valid or error
+    const responseIsValid = await Promise.resolve(question.validator(collected, results[index-1])).catch(error => error);
+
     // Check response was valid
-    if (!question.validator(collected)) {
+    if (responseIsValid !== true) {
         // Invalid response
         await channel.send(new MessageEmbed({
             author: {
-                name: `❌ ${question.failureMessage ?? 'Invalid response, try again!'}`
+                name: `❌ ${typeof responseIsValid === 'boolean' ? question.failureMessage : (responseIsValid?.message ?? 'Invalid response, try again!')}`
             }
         }));
 
@@ -79,6 +82,6 @@ export const waitForQuestions = async (ticketNumber: number, originalMessage: Me
 
     return waitForQuestions(ticketNumber, originalMessage, userId, guildId, channel, questions, index + 1, {
         ...results,
-        [index]: question.formatter(collected)
+        [index]: question.formatter(collected, results[index-1])
     });
 };

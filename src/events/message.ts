@@ -1,8 +1,8 @@
-import { MessageEmbed } from "discord.js";
+import { Message, MessageEmbed } from "discord.js";
 import { colours } from "../utils";
 import { store } from "../store";
 
-export const onMessage = async function onMessage (message) {
+export const onMessage = async function onMessage (message: Message) {
     // Don't process bot messages
     if (message.author.bot) return;
 
