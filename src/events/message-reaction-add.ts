@@ -101,6 +101,12 @@ const reactions = {
             // Get hell channel
             const hellChannel = reaction.message.guild?.channels.cache.get('834664630268723201');
             if (onlyfansLink !== 'N/A' && isTextBasedChannel(hellChannel)) {
+                // Ensure we have all members fetched
+                await reaction.message.guild?.members.fetch();
+
+                // Get total count of sellers with the role
+                const sellerRoleCount = reaction.message.guild?.roles.cache.get('776567998466228254')?.members.size;
+
                 // Post in Hell about their onlyfans
                 await hellChannel.send(`<@&814042724227350530> | <@${member?.id}>`, {
                     embed: new MessageEmbed({
@@ -111,7 +117,7 @@ const reactions = {
                             ➜ Checkout their onlyfans ${onlyfansLink}
                             ➜ If you enjoy their content please make sure post in <#811023380294926399>
 
-                            **We now have ${await reaction.message.guild?.roles.fetch('776567998466228254', false, true).then(role => role?.members.size)} sellers!**
+                            **We now have ${sellerRoleCount} sellers!**
                         `
                     })
                 });
