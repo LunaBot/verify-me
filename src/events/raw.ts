@@ -2,7 +2,7 @@ import { client } from "../client";
 import { isTextBasedChannel } from "../utils";
 
 // Patch client to emit on all message reaction add/remove events not just ones for cached messages
-export const onRaw = async function onRaw(packet) {
+export const onRaw = async function onRaw(packet: any) {
     // We don't want this to run on unrelated packets
     if (!['MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE'].includes(packet.t)) return;
     // Grab the channel to check the message from

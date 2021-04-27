@@ -94,6 +94,28 @@ const reactions = {
                     `
                 })
             });
+
+            // Get the person's onlyfans
+            const onlyfansLink = reaction.message.embeds[0].fields.find(field => field.name === 'Onlyfans Link')?.value;
+
+            // Get hell channel
+            const hellChannel = reaction.message.guild?.channels.cache.get('834664630268723201');
+            if (onlyfansLink && hellChannel) {
+                // Post in Hell about their onlyfans
+                await announcementChannel.send(`<@&814042724227350530> | <@${member?.id}>`, {
+                    embed: new MessageEmbed({
+                        color: colours.GREEN,
+                        description: dedent`
+                            **__A new seller just joined!__**
+
+                            ➜ Checkout their onlyfans ${onlyfansLink}
+                            ➜ If you enjoy their content please make sure post in <#811023380294926399>
+
+                            **We now have ${reaction.message.guild?.roles.cache.get('776567998466228254')?.members.size} sellers!**
+                        `
+                    })
+                });
+            }
         }
 
         try {
