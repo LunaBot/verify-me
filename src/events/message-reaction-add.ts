@@ -73,14 +73,6 @@ const getOnlyFansStats = async function(name: string) {
   throw new Error('Invalid profile');
 };
 
-const randomGreetings = [
-    'Welcome {user.username} to the lobby!',
-    'Hey! {user.username} finally joined!',
-    'OMG it\'s {user.username}',
-    'Everyone give a warm welcome to {user.username}',
-    'Fuck yeah, {user.username} is here... let\'s have pancakes',
-];
-
 // https://github.com/microsoft/TypeScript/issues/20812#issuecomment-493622598
 const isRole = (role?: Role): role is Role => role !== undefined;
 
@@ -105,9 +97,31 @@ const reactions = {
         const ticketNumber = reaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
 
         // Is the member a seller?
-        // Get their onlyfans and reddit if they provided it
-        const onlyfans = reaction.message.embeds[0].fields.find(field => field.name === 'Onlyfans')?.value;
-        const reddit = reaction.message.embeds[0].fields.find(field => field.name === 'Reddit')?.value;
+        const seller = reaction.message.embeds[0].fields.find(field => field.name === 'Seller?')?.value.includes('checkmark');
+
+        // Give the seller roles
+        if (seller) {
+            // Get discord roles
+            const sellerRole = member.guild.roles.cache.find(role => role.id === '776567998466228254');
+
+            // Add server seller role
+            if (sellerRole) {
+                await member.roles.add(sellerRole);
+            }
+
+            // Did they provided a reddit verification post link?
+            const reddit = reaction.message.embeds[0].fields.find(field => field.name === 'Reddit')?.value;
+            if (reddit !== 'N/A' && reddit?.startsWith('http')) {
+                const redditSellerRole = member.guild.roles.cache.find(role => role.id === '783282529737900034');
+
+                // Add reddit seller role
+                if (redditSellerRole) {
+                    await member.roles.add(redditSellerRole);
+                }
+
+                // @TODO: Give the seller role on reddit
+            }
+        }
 
         // Mark verified
         store.members.set(`${reaction.message.guild?.id}_${member?.id}`, 'verified', 'state');
@@ -123,16 +137,22 @@ const reactions = {
 
         // Post announcement that the member was approved
         if (isTextBasedChannel(announcementChannel)) {
-            // Get a random greeting
-            const randomGreeting = randomGreetings[Math.floor(Math.random() * randomGreetings.length)];
-
-            // Replace placeholders
-            const greeting = randomGreeting
-                .replace(/{user\.username}/g, member.displayName)
-                .replace(/{user\.tag}/g, `<@${member?.id}>`);
-
             // Send message
-            await announcementChannel.send(greeting);
+            await announcementChannel.send(`<@&836464776401649685> to our new ${} <@${member?.id}>`, {
+                embed: new MessageEmbed({
+                    author: {
+                        name: `**__Welcome to ${reaction.message.guild?.name}__**`
+                    },
+                    description: dedent`
+                        ➜ Make sure to read the <#805318568706441228>
+                        ➜ Get some roles from our <#781083640025186304>
+                        ➜ Try some of our <#831508428542967828> and win some :coin:
+                        ➜ If you enjoy the server please remember to <#818703159199399946>
+
+                        We now have ${reaction.message.guild?.memberCount} members!
+                    `
+                })
+            });
         }
 
         try {
@@ -391,7 +411,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
         },
         color: colours.AQUA,
         description: dedent`
-            This server is **strictly 18+** If you're underage please leave immediately!  
+            This server is **strictly 18+** If you're underage please leave immediately!
 
             Type \`!cancel\` to exit.
         `
@@ -534,7 +554,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
             const link = message.content.match(/(https:\/\/www.reddit.com\/r\/horny\/comments\/[a-z0-9]+)/g)?.[0];
             // Bail if the link is missing
             if (!link) return false;
-            
+
             // Check if the link's author matches the username they provided
             const response = await fetch(`${link}.json`).then(response => response.json());
             const author: string | undefined = response?.[0]?.data?.children?.[0]?.data?.author?.toLowerCase();
@@ -544,7 +564,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
             if (author !== lastReply?.toLowerCase()) {
                 throw new Error(`This post is by ${author} and you said your reddit username was ${lastReply}. Please post again but on the correct account.`)
             }
-            
+
             // Ensure the subreddit is correct
             if (subreddit !== 'horny') {
                 throw new Error(`Please make the post in /r/horny, not /r/${subreddit}`);
@@ -554,7 +574,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
             if (subreddit === `u_${author}`) {
                 throw new Error(`Please make the post in /r/horny, not /u/${author}`);
             }
-            
+
             return true;
         },
         formatter: (message: Message) => message.content.match(/(https:\/\/www.reddit.com\/r\/horny\/comments\/[a-z0-9]+)/g)?.[0],
@@ -637,15 +657,18 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
             inline: true
         }, {
             name: 'Seller?',
-            value: seller ? ':checkmark:' : ':decline:',
+            value: seller ? '<:checkmark:835897461276016691>' : '<:decline:835897487289745408>',
             inline: true
         }, {
             name: 'Ticket number',
             value: ticketNumber,
             inline: true
         }, ...(seller ? [{
-            name: 'Onlyfans',
-            value: `${onlyFansStats ? `${onlyFansStats?.posts} posts - ${onlyFansStats?.lastOnline ?? 'N/A'}` : 'Invalid'} - [https://onlyfans.com/${sellerReplies[1]}](Link)`,
+            name: 'Onlyfans stats',
+            value: `${onlyFansStats ? `${onlyFansStats?.posts} posts - ${onlyFansStats?.lastOnline ?? 'N/A'}` : 'Missing'}`,
+        }, {
+            name: 'Onlyfans link',
+            value: `[https://onlyfans.com/${sellerReplies[1]}](Link)`
         }, {
             name: 'Reddit',
             value: sellerReplies[2] ? `[${sellerReplies[4]}](${sellerReplies[3]})` : 'N/A'
