@@ -100,7 +100,7 @@ const reactions = {
 
             // Get hell channel
             const hellChannel = reaction.message.guild?.channels.cache.get('834664630268723201');
-            if (onlyfansLink !== 'N/A' && isTextBasedChannel(hellChannel)) {
+            if (seller && onlyfansLink?.includes('onlyfans.com') && isTextBasedChannel(hellChannel)) {
                 // Ensure we have all members fetched
                 await reaction.message.guild?.members.fetch();
 
