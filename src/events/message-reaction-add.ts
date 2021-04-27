@@ -12,6 +12,8 @@ import { store, guildsDefaultOptions } from '../store';
 const getOnlyFansStats = async function(name: string) {
   const nightmare = new Nightmare();
 
+  logger.debug(`Collecting onlyfans stats for "${name}"`);
+
   // Goto the page
   await nightmare.goto(`https://onlyfans.com/${name}`);
 
@@ -30,6 +32,8 @@ const getOnlyFansStats = async function(name: string) {
     profileItems: string[];
     lastOnline: string;
   };
+
+  logger.debug(`Finished collecting onlyfans stats for "${name}"`);
 
   // Close session
   await nightmare.end();
