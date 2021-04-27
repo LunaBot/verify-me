@@ -31,13 +31,13 @@ const reactions = {
         }));
 
         // Get ticket number
-        const ticketNumber = reaction.message.embeds[0].fields.find(field => field.name === 'Ticket number')?.value;
+        const ticketNumber = reaction.message.embeds[0].fields.find(field => field.name.toLowerCase() === 'ticket number')?.value;
 
         // Is the member a seller?
-        const seller = reaction.message.embeds[0].fields.find(field => field.name === 'Seller?')?.value.includes('checkmark');
+        const seller = reaction.message.embeds[0].fields.find(field => field.name.toLowerCase() === 'seller?')?.value.includes('checkmark');
 
         // Get the person's onlyfans
-        const onlyfansLink = reaction.message.embeds[0].fields.find(field => field.name === 'Onlyfans Link')?.value;
+        const onlyfansLink = reaction.message.embeds[0].fields.find(field => field.name.toLowerCase() === 'onlyfans link')?.value;
 
         // Give the seller roles
         if (seller) {
