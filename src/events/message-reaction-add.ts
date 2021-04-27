@@ -12,13 +12,17 @@ import { store, guildsDefaultOptions } from '../store';
 const getOnlyFansStats = async function(name: string) {
   const nightmare = new Nightmare();
 
-  logger.debug(`Collecting onlyfans stats for "${name}"`);
+  logger.debug(`GET_ONLYFANS_STATS:${name}`, 'FETCHING');
 
   // Goto the page
   await nightmare.goto(`https://onlyfans.com/${name}`);
 
+  logger.debug(`GET_ONLYFANS_STATS:${name}`, 'FETCHED_PAGE');
+
   // Wait till the page is loaded
   await nightmare.wait('.b-profile__sections__count');
+
+  logger.debug(`GET_ONLYFANS_STATS:${name}`, 'PAGE_LOADED');
 
   // Get profile items
   const { profileItems, ...result } = await nightmare.evaluate(() => {
@@ -33,10 +37,12 @@ const getOnlyFansStats = async function(name: string) {
     lastOnline: string;
   };
 
-  logger.debug(`Finished collecting onlyfans stats for "${name}"`);
+  logger.debug(`GET_ONLYFANS_STATS:${name}`, 'FINISHED');
 
   // Close session
   await nightmare.end();
+
+  logger.debug(`GET_ONLYFANS_STATS:${name}`, 'SESSION_ENDED');
 
   // Get the last time the account was online
   const lastOnline = result.lastOnline ? timeAgo(parseHumanDate(result.lastOnline)) : '';

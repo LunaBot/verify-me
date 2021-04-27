@@ -72,7 +72,7 @@ export const waitForQuestions = async (ticketNumber: number, originalMessage: Me
         // Invalid response
         await channel.send(new MessageEmbed({
             author: {
-                name: `❌ ${typeof responseIsValid === 'boolean' ? question.failureMessage : (responseIsValid?.message ?? 'Invalid response, try again!')}`
+                name: `❌ ${typeof responseIsValid === 'boolean' ? (question.failureMessage ?? 'Invalid response, try again!') : (responseIsValid?.message ?? 'Invalid response, try again!')}`
             }
         }));
 
