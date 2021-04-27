@@ -100,9 +100,9 @@ const reactions = {
 
             // Get hell channel
             const hellChannel = reaction.message.guild?.channels.cache.get('834664630268723201');
-            if (onlyfansLink && hellChannel) {
+            if (onlyfansLink !== 'N/A' && isTextBasedChannel(hellChannel)) {
                 // Post in Hell about their onlyfans
-                await announcementChannel.send(`<@&814042724227350530> | <@${member?.id}>`, {
+                await hellChannel.send(`<@&814042724227350530> | <@${member?.id}>`, {
                     embed: new MessageEmbed({
                         color: colours.GREEN,
                         description: dedent`
@@ -593,6 +593,21 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
 
         // Log ticket pending
         logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'PENDING');
+
+        // Tell the member
+        await user.send(new MessageEmbed({
+            color: colours.GREEN,
+            author: {
+                name: '<a:loading:836512100129177622> Submitting verification!'
+            },
+            fields: [{
+                name: 'Guild',
+                value: reaction.message.guild?.name
+            }, {
+                name: 'Ticket #',
+                value: `${ticketNumber}`.padStart(5, '0')
+            }]
+        }));
 
         // Get onlyfans stats
         const onlyFansStats = seller ? await getOnlyFansStats(sellerReplies[1]).catch(() => undefined) : undefined;
