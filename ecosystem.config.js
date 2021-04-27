@@ -25,6 +25,7 @@ module.exports = {
 			// eslint-disable-next-line
 			max_memory_restart: '250M',
 			env: {
+				DISPLAY: ':99',
 				LOG_LEVEL: 'debug'
 			},
 			// eslint-disable-next-line
@@ -39,6 +40,12 @@ module.exports = {
 			env_premium: {
 				LOG_LEVEL: 'info'
 			}
+		},
+		{
+			name: 'Xvfb',
+			interpreter: 'none',
+			script: 'Xvfb',
+			args: ':99'
 		}
 	],
 	deploy: {
