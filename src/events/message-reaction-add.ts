@@ -634,8 +634,13 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
         // Get onlyfans stats
         const onlyFansStats = seller ? await getOnlyFansStats(sellerReplies[1]).catch(() => undefined) : undefined;
 
-        // Send message to queue channel for mods/admins to verify
-        const verification = await queueChannel.send(new MessageEmbed({
+        // Log onlyfans stats
+        if (seller) {
+            logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'ONLYFANS_STATS:' + (onlyFansStats === undefined ? 'FAILURED_FETCH' : 'SUCCESS'));
+        }
+
+        // Embeds for admins/mods to see
+        const queueChanneEmbed = {
             author: {
                 name: `Ticket number #${`${ticketNumber}`.padStart(5, '0')}`,
                 iconURL: reaction.message.guild?.members.cache.find(member => member.id === user.id)?.user.displayAvatarURL()
@@ -677,7 +682,12 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
             image: {
                 url: basicReplies[3]
             }
-        }));
+        };
+
+        logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'QUEUE_CHANNEL_EMBED', queueChanneEmbed);
+
+        // Send message to queue channel for mods/admins to verify
+        const verification = await queueChannel.send(new MessageEmbed(queueChanneEmbed));
 
         // Add approve, redo, missing image and deny reactions
         await verification.react('👍');
