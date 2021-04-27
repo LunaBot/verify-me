@@ -140,6 +140,7 @@ const reactions = {
             // Send message
             await announcementChannel.send(`<@&836464776401649685> | <@${member?.id}>`, {
                 embed: new MessageEmbed({
+                    color: colours.GREEN,
                     description: dedent`
                         **__Welcome to ${reaction.message.guild?.name}__**
 
