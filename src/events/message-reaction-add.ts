@@ -111,7 +111,7 @@ const reactions = {
                             ➜ Checkout their onlyfans ${onlyfansLink}
                             ➜ If you enjoy their content please make sure post in <#811023380294926399>
 
-                            **We now have ${await reaction.message.guild?.roles.fetch('776567998466228254').then(role => role?.members.size)} sellers!**
+                            **We now have ${await reaction.message.guild?.roles.fetch('776567998466228254', false, true).then(role => role?.members.size)} sellers!**
                         `
                     })
                 });
