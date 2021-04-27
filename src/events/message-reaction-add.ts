@@ -36,6 +36,9 @@ const reactions = {
         // Is the member a seller?
         const seller = reaction.message.embeds[0].fields.find(field => field.name === 'Seller?')?.value.includes('checkmark');
 
+        // Get the person's onlyfans
+        const onlyfansLink = reaction.message.embeds[0].fields.find(field => field.name === 'Onlyfans Link')?.value;
+
         // Give the seller roles
         if (seller) {
             // Get discord roles
@@ -95,9 +98,6 @@ const reactions = {
                 })
             });
 
-            // Get the person's onlyfans
-            const onlyfansLink = reaction.message.embeds[0].fields.find(field => field.name === 'Onlyfans Link')?.value;
-
             // Get hell channel
             const hellChannel = reaction.message.guild?.channels.cache.get('834664630268723201');
             if (onlyfansLink !== 'N/A' && isTextBasedChannel(hellChannel)) {
@@ -111,7 +111,7 @@ const reactions = {
                             ➜ Checkout their onlyfans ${onlyfansLink}
                             ➜ If you enjoy their content please make sure post in <#811023380294926399>
 
-                            **We now have ${reaction.message.guild?.roles.cache.get('776567998466228254')?.members.size} sellers!**
+                            **We now have ${await reaction.message.guild?.roles.fetch('776567998466228254').then(role => role?.members.size)} sellers!**
                         `
                     })
                 });
@@ -597,9 +597,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
         // Tell the member
         await user.send(new MessageEmbed({
             color: colours.GREEN,
-            author: {
-                name: '<a:loading:836512100129177622> Submitting verification!'
-            },
+            description: `<a:loading:836512100129177622> Submitting verification!`,
             fields: [{
                 name: 'Guild',
                 value: reaction.message.guild?.name
