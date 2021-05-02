@@ -481,6 +481,8 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
                 // Get attachment's file extension
                 const fileExtension = attachment.url.split('.').pop() ?? 'unknown';
 
+                logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'IMAGE_FILE_EXTENSION', fileExtension);
+
                 // Only allow known file extensions
                 if (!['jpg', 'jpeg', 'png'].includes(fileExtension)) return false;
 
