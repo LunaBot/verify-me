@@ -104,7 +104,7 @@ const reactions = {
                         ➜ Get some roles from our <#781083640025186304>
                         ➜ Try some of our <#831508428542967828> and win some :coin:
                         ➜ If you enjoy the server please remember to <#818703159199399946>
-                        ${seller ? `
+                        ${seller ? dedent`
                             ➜ You now have access to <#835525672494825542> <#835525809867456543> and <#835547717672632352>
                             ➜ To gain access to <#831493908050477106> visit our <#831494130467209216>
                         ` : ''}
