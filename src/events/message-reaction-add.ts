@@ -1,7 +1,3 @@
-import Nightmare from 'nightmare';
-import parseHumanDate from 'parse-human-date';
-import { ago as timeAgo } from 'time-ago';
-import humanFormat from 'human-format';
 import dedent from 'dedent';
 import fetch from 'node-fetch';
 import { colours, isTextBasedChannel, sendAuditLogMessage, sleep, waitForQuestions } from '../utils';
@@ -12,6 +8,15 @@ import { getOnlyFansStats } from '../utils/get-onlyfans-stats';
 
 // https://github.com/microsoft/TypeScript/issues/20812#issuecomment-493622598
 const isRole = (role?: Role): role is Role => role !== undefined;
+
+const getAgeRole = (age: number) => {
+    if (age < 18) return;
+    if (age < 31) return '815075985728471081';
+    if (age < 41) return '815076244152254464';
+    if (age < 61) return '815076651535958066';
+    if (age < 99) return '815076297898328064';
+    return;
+};
 
 const reactions = {
     // Approve ticket in queue
@@ -61,6 +66,17 @@ const reactions = {
 
                 // @TODO: Give the seller role on reddit
             }
+        }
+
+        // Get member's age
+        const age = parseInt(reaction.message.embeds[0].fields.find(field => field.name.toLowerCase() === 'age')?.value!, 10);
+
+        // Get age role
+        const ageRole = getAgeRole(age);
+
+        // Give age role
+        if (ageRole) {
+            await member.roles.add(ageRole);
         }
 
         // Mark verified
@@ -124,26 +140,24 @@ const reactions = {
             }
         }
 
-        try {
-            // Let the member know
-            await member?.send(new MessageEmbed({
-                color: colours.GREEN,
-                author: {
-                    name: '🚀 Verification approved!'
-                },
-                fields: [{
-                    name: 'Guild',
-                    value: reaction.message.guild!.name
-                }, {
-                    name: 'Ticket #',
-                    value: `${ticketNumber}`.padStart(5, '0')
-                }],
-                description: 'Your verification was approved!'
-            }));
-        } catch {
+        // Let the member know
+        await member?.send(new MessageEmbed({
+            color: colours.GREEN,
+            author: {
+                name: '🚀 Verification approved!'
+            },
+            fields: [{
+                name: 'Guild',
+                value: reaction.message.guild!.name
+            }, {
+                name: 'Ticket #',
+                value: `${ticketNumber}`.padStart(5, '0')
+            }],
+            description: 'Your verification was approved!'
+        })).catch(error => {
             // Member likely either left or was kicked before this
             logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'MEMBER_LEFT');
-        }
+        });
     },
     // Ask member to redo ticket in queue
     async '🔁'(reaction: MessageReaction, member: GuildMember) {
@@ -156,26 +170,24 @@ const reactions = {
         // Log ticket redo
         logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'REDO');
 
-        try {
-            // Let the member know
-            await member?.send(new MessageEmbed({
-                color: colours.RED,
-                author: {
-                    name: '🚀 Verification denied!'
-                },
-                fields: [{
-                    name: 'Guild',
-                    value: reaction.message.guild!.name
-                }, {
-                    name: 'Ticket #',
-                    value: `${ticketNumber}`.padStart(5, '0')
-                }],
-                description: 'Don\'t worry though as you\'re able to redo it, just visit the server where you applied and retry.'
-            }));
-        } catch {
-            // Member likely either left or was kicked before this
+        // Let the member know
+        await member?.send(new MessageEmbed({
+            color: colours.RED,
+            author: {
+                name: '🚀 Verification denied!'
+            },
+            fields: [{
+                name: 'Guild',
+                value: reaction.message.guild!.name
+            }, {
+                name: 'Ticket #',
+                value: `${ticketNumber}`.padStart(5, '0')
+            }],
+            description: 'Don\'t worry though as you\'re able to redo it, just visit the server where you applied and retry.'
+        })).catch(error => {
+                // Member likely either left or was kicked before this
             logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'MEMBER_LEFT');
-        }
+        });
     },
     // Missing image
     async '🖼️'(reaction: MessageReaction, member: GuildMember) {
@@ -188,26 +200,24 @@ const reactions = {
         // Log ticket missing image
         logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'MISSING_IMAGE');
 
-        try {
-            // Let the member know
-            await member?.send(new MessageEmbed({
-                color: colours.RED,
-                author: {
-                    name: '🚀 Verification failed!'
-                },
-                fields: [{
-                    name: 'Guild',
-                    value: reaction.message.guild!.name
-                }, {
-                    name: 'Ticket #',
-                    value: `${ticketNumber}`.padStart(5, '0')
-                }],
-                description: 'It seems the image you tried sending broke on our end. Please visit the server where you applied and retry with a different one.'
-            }));
-        } catch {
+        // Let the member know
+        await member?.send(new MessageEmbed({
+            color: colours.RED,
+            author: {
+                name: '🚀 Verification failed!'
+            },
+            fields: [{
+                name: 'Guild',
+                value: reaction.message.guild!.name
+            }, {
+                name: 'Ticket #',
+                value: `${ticketNumber}`.padStart(5, '0')
+            }],
+            description: 'It seems the image you tried sending broke on our end. Please visit the server where you applied and retry with a different one.'
+        })).catch(error => {
             // Member likely either left or was kicked before this
             logger.debug(`TICKET:${ticketNumber}`.padStart(5, '0'), 'MEMBER_LEFT');
-        }
+        });
     },
     // Deny ticket in queue
     async '👎'(reaction: MessageReaction, member: GuildMember) {
@@ -464,7 +474,19 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
             formatter: (message: Message) => ['yes', 'okay', '0', 'true'].includes(message.content.trim().toLowerCase())
         }, {
             text: `Please send a photo of yourself holding a piece of paper with today's date, the text "I'm joining the lobby" and your **DISCORD** username.`,
-            validator: (message: Message) => message.attachments.find(attachment => attachment.url !== '') !== undefined,
+            validator: (message: Message) => message.attachments.find(attachment => {;
+                // Bail if there's no attachment
+                if (attachment.url !== '') return false;
+
+                // Get attachment's file extension
+                const fileExtension = attachment.url.split('.').pop() ?? 'unknown';
+
+                // Only allow known file extensions
+                if (!['jpg', 'jpeg', 'png'].includes(fileExtension)) return false;
+
+                // Image sent, woo!
+                return true;
+            }) !== undefined,
             formatter: (message: Message) => message.attachments.find(attachment => attachment.url !== '')?.url
         }];
 
@@ -499,8 +521,8 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
             formatter: (message: Message) => ['yes', 'okay', '0', 'true'].includes(message.content.trim().toLowerCase())
         }, {
             text: 'Please send your onlyfans link. (e.g. https://onlyfans.com/testaccount)',
-            validator: (message: Message) => message.content.match(/(?:(?:http|https)\:\/\/)*onlyfans.com\/([a-zA-Z0-9]+)/gi) !== null,
-            formatter: (message: Message) => (/(?:(?:http|https)\:\/\/)*onlyfans.com\/([a-zA-Z0-9-_]+)/gi.exec(message.content) ?? [])[1],
+            validator: (message: Message) => message.content.match(/(?:(?:http|https)\:\/\/)*onlyfans.com\/([a-zA-Z0-9\.\-\_]+)/gi) !== null,
+            formatter: (message: Message) => (/(?:(?:http|https)\:\/\/)*onlyfans.com\/([a-zA-Z0-9\.\-\_]+)/gi.exec(message.content) ?? [])[1],
             canSkipCheck: (_message: Message, lastReply: boolean) => !lastReply,
             failureMessage: 'Invalid link!'
         }, {
