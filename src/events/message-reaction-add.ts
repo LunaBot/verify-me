@@ -476,12 +476,10 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
             text: `Please send a photo of yourself holding a piece of paper with today's date, the text "I'm joining the lobby" and your **DISCORD** username.`,
             validator: (message: Message) => message.attachments.find(attachment => {;
                 // Bail if there's no attachment
-                if (attachment.url !== '') return false;
+                if (attachment.url === '') return false;
 
                 // Get attachment's file extension
                 const fileExtension = attachment.url.split('.').pop() ?? 'unknown';
-
-                logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, 'IMAGE_FILE_EXTENSION', fileExtension);
 
                 // Only allow known file extensions
                 if (!['jpg', 'jpeg', 'png'].includes(fileExtension)) return false;
