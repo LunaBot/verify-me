@@ -101,6 +101,7 @@ const reactions = {
                         **__Welcome to ${reaction.message.guild?.name}__**
 
                         ➜ Make sure to read the <#805318568706441228>
+                        ➜ Introduce yourself in <#780369802262478849>
                         ➜ Get some roles from our <#781083640025186304>
                         ➜ Try some of our <#831508428542967828> and win some :coin:
                         ➜ If you enjoy the server please remember to <#818703159199399946>
