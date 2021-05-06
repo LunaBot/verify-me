@@ -1,4 +1,6 @@
-import { GuildMember } from 'discord.js';
+import { GuildMember, MessageEmbed } from 'discord.js';
+import { logger } from 'logger';
+import { colours } from 'utils';
 import { store } from '../store';
 
 export const onGuildMemberAdd = async function onGuildMemberAdd(member: GuildMember) {
@@ -14,4 +16,16 @@ export const onGuildMemberAdd = async function onGuildMemberAdd(member: GuildMem
     // Update the members store with invite details
     store.members.set(`${member.guild.id}_${member.id}`, invite?.inviter?.id, 'invitedBy');
     store.members.set(`${member.guild.id}_${member.id}`, invite?.code, 'invite');
+
+    // DM member asking them to verify
+    await member?.send(new MessageEmbed({
+        color: colours.ORANGE,
+        author: {
+            name: '🚀 Please verify!'
+        },
+        description: 'To start your verification visit <#805318017071579166> and click the :white_check_mark:'
+    })).catch(error => {
+        // Member may have left immediately or they may have DMs off
+        logger.debug('MEMBER_JOIN_DM', `ID:${member.user.id}`, 'FAILED', error);
+    });
 };
