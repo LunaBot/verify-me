@@ -1,9 +1,9 @@
 import dedent from 'dedent';
-import fetch from 'node-fetch';
-import { colours, isTextBasedChannel, sendAuditLogMessage, sleep, waitForQuestions } from '../utils';
 import { DMChannel, GuildMember, Message, MessageEmbed, MessageReaction, Role, TextChannel, User } from 'discord.js';
+import fetch from 'node-fetch';
 import { logger } from '../logger';
-import { store, guildsDefaultOptions } from '../store';
+import { guildsDefaultOptions, store } from '../store';
+import { colours, isTextBasedChannel, sendAuditLogMessage, sleep, waitForQuestions } from '../utils';
 import { getOnlyFansStats } from '../utils/get-onlyfans-stats';
 
 // https://github.com/microsoft/TypeScript/issues/20812#issuecomment-493622598
@@ -483,7 +483,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
                 const fileExtension = attachment.url.split('.').pop() ?? 'unknown';
 
                 // Only allow known file extensions
-                if (!['jpg', 'jpeg', 'png'].includes(fileExtension)) return false;
+                if (!['jpg', 'jpeg', 'png'].includes(fileExtension.toLowerCase())) return false;
 
                 // Image sent, woo!
                 return true;
