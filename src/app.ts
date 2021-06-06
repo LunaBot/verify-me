@@ -1,14 +1,18 @@
 import { config } from './config';
 import { client } from './client';
-import { onError, onGuildMemberAdd, onGuildMemberRemove, onMessage, onMessageReactionAdd, onRaw, onReady } from './events';
+import { onError, onGuildMemberAdd, onGuildMemberRemove, onMessage, onMessageReactionAdd, onReady } from './events';
 import { logger } from './logger';
 
-const protect = (name: string, func: (...args) => any) => async (...args) => {
+const protect = (name: string, func: (...args: any[]) => any) => async (...args: any[]) => {
     try {
         await Promise.resolve(func(...args));
     } catch (error) {
-        const [message, ...stack] = error.stack.split('\n');
-        logger.error(`EVENT:${name.toUpperCase()}`, message, '\n' + stack.join('\n'));
+        try {
+            const [message, ...stack] = error.stack.split('\n');
+            logger.error(`EVENT:${name.toUpperCase()}`, message, '\n' + stack.join('\n'));
+        } catch (error) {
+            logger.error(`EVENT:${name.toUpperCase()}`, error);
+        }
     }
 };
 
@@ -19,7 +23,6 @@ export const start = async () => {
     client.on('guildMemberRemove', protect('GUILD_MEMBER_REMOVE', onGuildMemberRemove));
     client.on('message', protect('MESSAGE', onMessage));
     client.on('messageReactionAdd', protect('MESSAGE_REACTION_ADD', onMessageReactionAdd));
-    client.on('raw', protect('RAW', onRaw));
     client.on('ready', protect('READY', onReady));
 
     // Login to discord's ws gateway

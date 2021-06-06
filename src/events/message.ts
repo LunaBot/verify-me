@@ -1,6 +1,9 @@
-import { Message, MessageEmbed } from "discord.js";
+import dedent from "dedent";
+import { DiscordAPIError, Guild, Message, MessageEmbed } from "discord.js";
 import { colours } from "../utils";
 import { store } from "../store";
+import { startVerification, waitForAnswer } from "utils/start-verification";
+import { client } from "../client";
 
 export const onMessage = async function onMessage (message: Message) {
     // Don't process bot messages
@@ -10,10 +13,104 @@ export const onMessage = async function onMessage (message: Message) {
     const [command, ...args] = message.content.slice(1).trim().split(/ +/);
 
     // Process DM
-    if (!message.guild) return;
+    if (!message.guild && message.author) {
+        // Reset stuck bot
+        if (command === 'reset') {
+            store.members.delete(message.author.id, 'waiting-reply');
+            await message.channel.send(new MessageEmbed({
+                description: '✅ Ticket state reset!',
+                color: colours.AQUA
+            }));
+            return;
+        }
 
-    // Bail if the message is missing out prefix
-    if (!message.content.startsWith('!')) return;
+        // Bail if a collector is waiting for their reply
+        if (store.members.get(message.author.id, 'waiting-reply')) {
+            return;
+        }
+
+        // Bail if this isn't a start command
+        if (command !== 'start' && command !== 'verify' && command !== 'verification') return;
+
+        // Ask what server they want to verify with
+        const guild = await waitForAnswer<Guild | undefined>({
+            user: message.author,
+            question: 'Which server are you verifying for?',
+            validator: message => {
+                return Object.values({
+                    the_lobby: message.content.trim().toLowerCase().includes('lobby'),
+                    star_hub: message.content.trim().toLowerCase().includes('star')
+                }).filter(entry => entry === true).length >= 1;
+            },
+            formatter: message => {
+                const guild = Object.entries({
+                    the_lobby: message.content.trim().toLowerCase().includes('lobby'),
+                    star_hub: message.content.trim().toLowerCase().includes('star')
+                }).find(entry => entry[1] === true)?.[0];
+
+                if (guild === 'the_lobby') {
+                    return client.guilds.cache.find(guild => guild.id === '776567290907852840');
+                }
+
+                if (guild === 'star_hub') {
+                    return client.guilds.cache.find(guild => guild.id === '847481771456987136');
+                }
+
+                return undefined;
+            }
+        });
+
+        // Check if bot is in the guild
+        if (!guild) {
+            await message.channel.send(new MessageEmbed({
+                color: colours.AQUA,
+                description: `Please let my creator I'm not currently added to that server.`
+            }));
+            return;
+        }
+
+        // Get member from the guild provided
+        const member = guild?.members.cache.get(message.author.id) ?? await guild?.members.fetch(message.author.id).catch(error => error);
+
+        // Check if there was an error
+        if (!member || member instanceof DiscordAPIError) {
+            // User isn't a member of that guild
+            if (!member || member.message === 'Unknown Member') {
+                await message.channel.send(new MessageEmbed({
+                    color: colours.AQUA,
+                    description: `Please join ${guild?.name} before verifying!`
+                }));
+                return;
+            }
+        }
+
+        // Get ticket state
+        const ticketState = store.members.get(`${member.guild.id}_${message.author.id}`, 'state');
+
+        // Check if the member has a ticket already open
+        if (ticketState === 'PENDING') {
+            await message.channel.send(new MessageEmbed({
+                description: '❌ Your verification has already been submitted to the queue, please wait!',
+                color: colours.RED
+            }));
+            return;
+        }
+
+        // Check if the member has been blocked from applying
+        if (ticketState === 'DENIED') {
+            await message.channel.send(new MessageEmbed({
+                description: '❌ You\'ve been blocked from applying to this server. Please contact the mods/admins for further information.',
+                color: colours.RED
+            }));
+            return;
+        }
+
+        // Start verification
+        return startVerification(member);
+    }
+
+    // Bail if the message is missing our prefix
+    if (!message.content.startsWith(store.guilds.get(message.guild?.id!).prefix ?? '!')) return;
 
     // Process guild message
     if (message.guild) {
@@ -38,22 +135,6 @@ export const onMessage = async function onMessage (message: Message) {
                 return;
             }
 
-            // Allow guild to be reset
-            if (command === 'clear-watched-messages') {
-                const verificationMessageId = store.guilds.get(message.guild.id as string, 'verificationMessage');
-
-                // Clear all watched messages for this guild
-                [...store.watchedMessages.entries()].forEach(([messageId, guildId]) => {
-                    // Ensure we clear all in this guild but
-                    // don't clear the verification message watcher as we need that
-                    if (guildId === message.guild?.id && message.id !== verificationMessageId) {
-                        store.watchedMessages.delete(messageId);
-                    }
-                });
-
-                return;
-            }
-
             // Allow ticket number to be reset
             if (command === 'reset-counter') {
                 // Reset ticket number
@@ -69,23 +150,43 @@ export const onMessage = async function onMessage (message: Message) {
                 }));
                 return;
             }
+
+            // Set the config to a new JSON string
+            if (command === 'set-config') {
+                try {
+                    // Parse supplied config
+                    const config = JSON.parse(message.content.split(command)[1]);
+                    // Update store
+                    store.guilds.set(message.guild.id, config);
+                    await message.channel.send(new MessageEmbed({
+                        color: colours.GREEN,
+                        description: '```\n' + JSON.stringify(store.guilds.get(message.guild.id), null, 2) +  '\n```'
+                    }));
+                } catch {
+                    await message.channel.send(new MessageEmbed({
+                        color: colours.RED,
+                        description: 'Failed updated config.'
+                    }));
+                }
+                return;
+            }
         }
 
         // If they're an admin let them change settings
         if (message.member?.roles.cache.find(role => role.id === store.guilds.get(message.guild!.id as string, 'adminRole'))) {
-            // Set the watched message
-            if (command === 'set-watched-message') {
-                store.watchedMessages.set(args[0], message.guild.id);
-                store.guilds.set(message.guild.id, args[0], 'verificationMessage');
+            // Set member's ticket state
+            if (command === 'set-members-ticket-state') {
                 await message.channel.send(new MessageEmbed({
                     color: colours.GREEN,
-                    description: 'Watched message updated!'
+                    description: `Ticket state updated for <@${args[0]}>!`
                 }));
+                console.log(`${message.member.guild.id}_${args[0]}`, args[1], 'state');
+                store.members.set(`${message.member.guild.id}_${args[0]}`, args[1], 'state');
                 return;
             }
 
             // Set the verification queue channel
-            if (command === 'set-queue-channel') {
+            if (command === 'set-verification-queue-channel') {
                 // Make sure we have the channel we're asking for
                 const channel = message.guild.channels.cache.find(channel => channel.id === message.mentions.channels.first()?.id ?? args[0]);
                 if (!channel) {
@@ -140,28 +241,6 @@ export const onMessage = async function onMessage (message: Message) {
                 await message.channel.send(new MessageEmbed({
                     color: colours.GREEN,
                     description: `Announcement channel set to \`${channel.name}\`!`
-                }));
-                return;
-            }
-
-            // Set the roles verified members get
-            if (command === 'set-verified-roles') {
-                // Make sure we have the roles we're asking for
-                const roles = message.mentions.roles
-                    .map(role => message.guild!.roles.cache.find(cachedRole => cachedRole.id === role.id)?.id)
-                    .filter(role => role);
-                if (roles.length === 0) {
-                    await message.channel.send(new MessageEmbed({
-                        color: colours.RED,
-                        description: `No roles found for \`${args.join(' ')}\`!`
-                    }));
-                    return;
-                }
-
-                store.guilds.set(message.guild.id, roles, 'roles');
-                await message.channel.send(new MessageEmbed({
-                    color: colours.GREEN,
-                    description: `Verified roles set to \`${roles.join(' ')}\`!`
                 }));
                 return;
             }
