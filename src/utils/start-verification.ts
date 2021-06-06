@@ -119,7 +119,7 @@ export const startVerification = async function startVerification(member: GuildM
             failureText: 'No profile image detected!',
             validator: (message: Message) => (message.channel as DMChannel).recipient.avatar !== null,
             formatter: message => `https://cdn.discordapp.com/avatars/${message.author.id}/${message.author.avatar}.jpg`
-        }) : `https://cdn.discordapp.com/avatars/${message.author.id}/${message.author.avatar}.jpg`;
+        }) : `https://cdn.discordapp.com/avatars/${message.author.id}/${member.user.avatar}.jpg`;
 
         logger.debug(`TICKET:${ticketNumber}`, `AVATAR: ${avatar}`);
 
@@ -453,5 +453,6 @@ export const startVerification = async function startVerification(member: GuildM
 
         // Log error
         console.error(`START_VERIFICATION:${member.id}`, error);
+        console.log(error);
     }
 };
