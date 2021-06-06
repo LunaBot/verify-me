@@ -4,6 +4,7 @@ import { colours } from "../utils";
 import { store } from "../store";
 import { startVerification, waitForAnswer } from "utils/start-verification";
 import { client } from "../client";
+import { createEmbed } from "../utils/create-embed";
 
 export const onMessage = async function onMessage (message: Message) {
     // Don't process bot messages
@@ -105,8 +106,18 @@ export const onMessage = async function onMessage (message: Message) {
             return;
         }
 
-        // Start verification
-        return startVerification(member);
+        try {
+            // Start verification
+            return startVerification(member);
+        } catch (error) {
+            if (error.message === 'CANCELLED') {
+                const embed = createEmbed({ author: '🚫 Verification cancelled!' });
+                await member.send(embed).catch(() => {});
+                return;
+            }
+
+            throw error;
+        }
     }
 
     // Bail if the message is missing our prefix

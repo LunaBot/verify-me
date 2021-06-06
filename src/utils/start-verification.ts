@@ -65,7 +65,7 @@ export const waitForAnswer = async <T = unknown>({ user, question, attempt, vali
         return waitForAnswer({ user, question, attempt: 1, validator, formatter });
     } catch (error) {
         throw error;
-    }finally {
+    } finally {
         store.members.set(user.id, false, 'waiting-reply');
     }
 }
