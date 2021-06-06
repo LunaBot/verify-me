@@ -142,6 +142,6 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
         }
 
         // Log error
-        console.error(error);
+        console.error(`MESSAGE_REACTION_ADD:${reaction.message.id}`, error);
     }
 };

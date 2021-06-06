@@ -452,6 +452,6 @@ export const startVerification = async function startVerification(member: GuildM
         }
 
         // Log error
-        console.error(error);
+        console.error(`START_VERIFICATION:${member.id}`, error);
     }
 };

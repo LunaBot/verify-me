@@ -10,7 +10,7 @@ const protect = (name: string, func: (...args: any[]) => any) => async (...args:
         try {
             const [message, ...stack] = error.stack.split('\n');
             logger.error(`EVENT:${name.toUpperCase()}`, message, '\n' + stack.join('\n'));
-        } catch (error) {
+        } catch {
             logger.error(`EVENT:${name.toUpperCase()}`, error);
         }
     }
