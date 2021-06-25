@@ -1,10 +1,10 @@
-import { DiscordAPIError, Guild, Message, MessageEmbed } from "discord.js";
+import { DiscordAPIError, Guild as DiscordGuild, GuildMember, Message, MessageEmbed } from "discord.js";
 import { colours } from "../utils";
 import { startVerification } from "../utils/start-verification";
 import { waitForAnswer } from "../utils/start-verification/waitForAnswer";
 import { client } from "../client";
 import { createEmbed } from "../utils/create-embed";
-import { getTicketStatus, defaultUser, deserializeGuild, deserializeTicket, deserializeUser, getGuild, getTicket, getTicketKeys, getUser, serialize, updateGuild, User, deserialize, updateTicketStatus } from "../store";
+import { getTicketStatus, deserializeGuild, deserializeTicket, getGuild, getTicket, getTicketKeys, serialize, updateGuild, deserialize, updateTicketStatus, defaultGuild, Guild } from "../store";
 
 export const onMessage = async function onMessage (message: Message) {
     // Don't process bot messages
@@ -31,7 +31,7 @@ export const onMessage = async function onMessage (message: Message) {
             await updateTicketStatus(`is_in_message:${message.author.id}`, '.', serialize<boolean>(true));
 
             // Ask what server they want to verify with
-            const guild = await waitForAnswer<Guild | undefined>({
+            const guild = await waitForAnswer<DiscordGuild | undefined>({
                 user: message.author,
                 question: 'Which server are you verifying for?',
                 validator: (message: Message) => {
@@ -68,7 +68,7 @@ export const onMessage = async function onMessage (message: Message) {
             }
 
             // Get member from the guild provided
-            const member = guild?.members.cache.get(message.author.id) ?? await guild?.members.fetch(message.author.id).catch(error => error);
+            const member = guild?.members.cache.get(message.author.id) ?? await guild?.members.fetch(message.author.id).catch((error: DiscordAPIError) => error);
 
             // Check if there was an error
             if (!member || member instanceof DiscordAPIError) {
@@ -84,7 +84,7 @@ export const onMessage = async function onMessage (message: Message) {
 
             // Get all tickets for this user
             // ticket:$guildId:$memberId:$ticketId
-            const ticketKeys = await getTicketKeys(`${guild.id}:${member.id}:*`);
+            const ticketKeys = await getTicketKeys(`${guild.id}:${(member as GuildMember).id}:*`);
             if (ticketKeys.length >= 1) {
                 const tickets = await Promise.all(ticketKeys.map(ticketKey => getTicket(ticketKey, '.').then(deserializeTicket)));
                 const pendingTickets = tickets.filter(ticket => ticket.type === 'VERIFICATION' && (ticket.state === 'PENDING' || ticket.state === 'PENDING_REDO'));
@@ -110,7 +110,7 @@ export const onMessage = async function onMessage (message: Message) {
             }
 
             // Start verification
-            return startVerification(member);
+            return startVerification(member as GuildMember);
         } catch (error) {
             if (error.message === 'CANCELLED') {
                 const embed = createEmbed({ author: '🚫 Verification cancelled!' });
@@ -128,10 +128,13 @@ export const onMessage = async function onMessage (message: Message) {
     // Process guild message
     if (message.guild) {
         // Get guild from db
-        const guild = await getGuild(message.guild.id, '.').then(deserializeGuild);
+        const guild = await getGuild(message.guild.id, '.').then(deserializeGuild) ?? await updateGuild(message.guild.id, '.', serialize<Partial<Guild>>({
+            ...defaultGuild,
+            guildId: message.guild.id
+        }));
 
         // Bail if the message is missing our prefix
-        if (!message.content.startsWith(guild.prefix || '!')) return;
+        if (!message.content.startsWith(guild?.prefix || '!')) return;
 
         // If they're the owner let them set the admin role
         // !verify-settings set-admin 828108533953986582
