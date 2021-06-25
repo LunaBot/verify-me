@@ -2,13 +2,14 @@ import dedent from 'dedent';
 import { GuildMember, MessageEmbed, MessageReaction } from 'discord.js';
 import linkify from 'markdown-linkify';
 import { logger } from '../../logger';
-import { guildsDefaultOptions, store } from '../../store';
 import { colours, isTextBasedChannel, sleep } from '../../utils';
 import { getAgeRole } from "./get-age-role";
 import { createEmbed } from '../../utils/create-embed';
+import { deserializeGuild, getGuild, serialize, updateTicket } from '../../store';
 
-const getDmPreferenceRole = (guildId: string, dmPreference: 'ask before dming' | 'dms are open' | 'do not dm'): string | undefined => {
-    const dmRoles = store.guilds.get(guildId, 'dmRoles');
+const getDmPreferenceRole = async (guildId: string, dmPreference: 'ask before dming' | 'dms are open' | 'do not dm'): Promise<string | undefined> => {
+    const guild = await getGuild(guildId, '.').then(deserializeGuild);
+    const dmRoles = guild.dmRoles;
 
     if (dmPreference === 'ask before dming') return dmRoles.ask;
     if (dmPreference === 'dms are open') return dmRoles.open;
@@ -19,8 +20,11 @@ const getDmPreferenceRole = (guildId: string, dmPreference: 'ask before dming' |
 export const reactions = {
     // Approve ticket in queue
     async '👍'(reaction: MessageReaction, member: GuildMember) {
+        // Get guild
+        const guild = await getGuild(member.guild.id, '.').then(deserializeGuild);
+
         // Get member role ID
-        const memberRoleId = store.guilds.get(reaction.message.guild?.id!, 'memberRole');
+        const memberRoleId = guild.memberRole;
 
         // No member role set in config
         if (!memberRoleId) {
@@ -81,7 +85,7 @@ export const reactions = {
         } else {
             if (seller) {
                 // Get seller role ID
-                const sellerRoleId = store.guilds.get(member.guild.id, 'sellerRole');
+                const sellerRoleId = guild.sellerRole;
 
                 // No seller role set
                 if (!sellerRoleId) {
@@ -104,7 +108,7 @@ export const reactions = {
         const age = parseInt(reaction.message.embeds[0].fields.find(field => field.name.toLowerCase() === 'age')?.value!, 10);
 
         // Get age role
-        const ageRole = getAgeRole(reaction.message.guild?.id!, age);
+        const ageRole = await getAgeRole(reaction.message.guild?.id!, age);
 
         // Give age role
         if (ageRole) {
@@ -115,23 +119,21 @@ export const reactions = {
         const dmPreference = reaction.message.embeds[0].fields.find(field => field.name.toLowerCase() === 'dm preference')?.value!.toLowerCase();
 
         // Get DM preference role
-        const dmPreferenceRole = getDmPreferenceRole(reaction.message.guild?.id!, dmPreference?.toLowerCase() as any);
+        const dmPreferenceRole = await getDmPreferenceRole(reaction.message.guild?.id!, dmPreference?.toLowerCase() as any);
 
         // Give DM preference role
         if (dmPreferenceRole) {
             await member.roles.add(dmPreferenceRole);
         }
 
-        // Clear ticket for member
-        store.members.delete(member?.id);
+        // Mark verified
+        await updateTicket(`ticket:${member.user.id}:${ticketNumber}`, '.state', serialize<string>('VERIFIED'));
 
         // Log ticket approved
         logger.debug(`TICKET:${ticketNumber}`, 'APPROVED');
 
-        await store.guilds.ensure('announcementChannel', guildsDefaultOptions.announcementChannel);
-
         // Mention the user in the chat channel
-        const announcementChannelId = await store.guilds.get(reaction.message.guild!.id, 'announcementChannel');
+        const announcementChannelId = guild.announcementChannel;
         const announcementChannel = reaction.message.guild!.channels.cache.get(announcementChannelId);
 
         // Post announcement that the member was approved
@@ -162,7 +164,7 @@ export const reactions = {
                 });
             } else {
                 // Get welcome role ID
-                const welcomeRoleId = store.guilds.get(member.guild.id, 'welcomeRole');
+                const welcomeRoleId = guild.welcomeRole;
 
                 // No welcome role set
                 if (!welcomeRoleId) {
@@ -175,7 +177,7 @@ export const reactions = {
                 await reaction.message.guild?.members.fetch();
 
                 // Get seller role ID
-                const sellerRoleId = store.guilds.get(member.guild.id, 'sellerRole');
+                const sellerRoleId = guild.sellerRole;
 
                 // No seller role set
                 if (!sellerRoleId) {
@@ -232,8 +234,6 @@ export const reactions = {
             }
         }
 
-        store.members.set(`${reaction.message.guild?.id}_${member?.id}`, 'APPROVED', 'state');
-
         // Let the member know
         await member?.send(new MessageEmbed({
             color: colours.GREEN,
@@ -254,8 +254,8 @@ export const reactions = {
         // Get ticket number
         const ticketNumber = reaction.message.embeds[0].footer?.text?.match(/Ticket \#([0-9]+)/)![1];
 
-        // Set member's state
-        store.members.set(`${reaction.message.guild?.id}_${member?.id}`, 'REDO', 'state');
+        // Mark as redo
+        await updateTicket(`ticket:${member.user.id}:${ticketNumber}`, '.state', serialize<string>('PENDING_REDO'));
 
         // Log ticket redo
         logger.debug(`TICKET:${ticketNumber}`, 'REDO');
@@ -281,7 +281,7 @@ export const reactions = {
         const ticketNumber = reaction.message.embeds[0].footer?.text?.match(/Ticket \#([0-9]+)/)![1];
 
         // Ensure the user can't apply again
-        store.members.set(`${reaction.message.guild?.id}_${member?.id}`, 'DENIED', 'state');
+        await updateTicket(`ticket:${member.user.id}:${ticketNumber}`, '.state', serialize<string>('DENIED'));
 
         // Log ticket denied
         logger.debug(`TICKET:${ticketNumber}`, 'DENIED');

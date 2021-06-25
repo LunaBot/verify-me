@@ -1,9 +1,9 @@
 import { Message, MessageEmbed, TextChannel } from "discord.js";
-import { store } from "../store";
-import { colours } from "utils";
+import { colours } from "./colours";
 import type { Question } from "../types";
 import { logger } from "../logger";
 import { client } from "../client";
+import { serialize, updateTicket } from "../store";
 
 export const waitForQuestions = async (ticketNumber: number, originalMessage: Message, userId: string, guildId: string, channel: TextChannel, questions: Question[], index: number = 0, results: any[] = []): Promise<any[]> => {
     // Get the current question
@@ -16,7 +16,7 @@ export const waitForQuestions = async (ticketNumber: number, originalMessage: Me
     logger.debug(`TICKET:${`${ticketNumber}`.padStart(5, '0')}`, `STEP:${index}`, `${user.username}#${user.discriminator}`);
 
     // Mark which step we're on
-    store.tickets.set(`${guildId}_${ticketNumber}`, index, 'step');
+    await updateTicket(`ticket:${userId}:${ticketNumber}`, '.step', serialize<number>(index));
 
     // Return results when done
     if (!question) return results;

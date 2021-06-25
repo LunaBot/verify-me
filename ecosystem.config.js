@@ -52,7 +52,7 @@ module.exports = {
 		production: {
 			...commonDeploy,
 			path: '/home/xo/code/lunabot/verify-me/production',
-			'post-deploy': 'pnpm install && npm run build && pm2 startOrGracefulReload ecosystem.config.js --env production'
+			'post-deploy': 'redis-cli --scan --pattern "user_in_message:*" | xargs redis-cli unlink && redis-cli --scan --pattern "user_ticket_opened:*" | xargs redis-cli unlink && pnpm install && npm run build && pm2 startOrGracefulReload ecosystem.config.js --env production'
 		}
 	}
 };

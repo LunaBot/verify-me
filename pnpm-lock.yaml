@@ -1,9 +1,11 @@
 lockfileVersion: 5.3
 
 specifiers:
+  '@types/dedent': ^0.7.0
   '@types/nightmare': ^2.10.4
   '@types/node': ^14.14.37
   '@types/node-fetch': ^2.5.10
+  '@types/redis': ^2.8.29
   chalk: ^4.1.0
   dedent: ^0.7.0
   discord.js: ^12.5.3
@@ -16,11 +18,14 @@ specifiers:
   node-fetch: ^2.6.1
   p-each-series: ^3.0.0
   parse-human-date: ^1.2.0
+  redis: ^3.1.2
   time-ago: ^0.2.1
+  ts-toolbelt: ^9.6.0
   tsup: ^4.8.21
   typescript: ^4.2.4
 
 dependencies:
+  '@types/dedent': 0.7.0
   chalk: 4.1.0
   dedent: 0.7.0
   discord.js: 12.5.3
@@ -33,12 +38,15 @@ dependencies:
   node-fetch: 2.6.1
   p-each-series: 3.0.0
   parse-human-date: 1.2.0
+  redis: 3.1.2
   time-ago: 0.2.1
+  ts-toolbelt: 9.6.0
 
 devDependencies:
   '@types/nightmare': 2.10.4
   '@types/node': 14.14.37
   '@types/node-fetch': 2.5.10
+  '@types/redis': 2.8.29
   tsup: 4.8.21_typescript@4.2.4
   typescript: 4.2.4
 
@@ -109,6 +117,10 @@ packages:
     engines: {node: '>= 6'}
     dev: false
 
+  /@types/dedent/0.7.0:
+    resolution: {integrity: sha512-EGlKlgMhnLt/cM4DbUSafFdrkeJoC9Mvnj0PUCU7tFmTjMjNRT957kXCx0wYm3JuEq4o4ZsS5vG+NlkM2DMd2A==}
+    dev: false
+
   /@types/nightmare/2.10.4:
     resolution: {integrity: sha512-G7wcaXQ4LOTglVnNBylEZO13GH7+4SGxjCSV7/tm3Ae20tkJ3zCKdqYEP81ojP4TlqGXS03kxcvr14rvqxxC6A==}
     dependencies:
@@ -130,12 +142,22 @@ packages:
     resolution: {integrity: sha512-dueRKfaJL4RTtSa7bWeTK1M+VH+Gns73oCgzvYfHZywRCoPSd8EkXBL0mZ9unPTveBn+D9phZBaxuzpwjWkW0g==}
     dev: true
 
+  /@types/node/14.17.3:
+    resolution: {integrity: sha512-e6ZowgGJmTuXa3GyaPbTGxX17tnThl2aSSizrFthQ7m9uLGZBXiGhgE55cjRZTF5kjZvYn9EOPOMljdjwbflxw==}
+    dev: true
+
   /@types/node/8.10.66:
     resolution: {integrity: sha512-tktOkFUA4kXx2hhhrB8bIFb5TbwzS4uOhKEmwiD+NoiL0qtP2OQ9mFldbgD4dV1djrlBYP6eBuQZiWjuHUpqFw==}
     dev: false
 
   /@types/parse-json/4.0.0:
     resolution: {integrity: sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==}
+    dev: true
+
+  /@types/redis/2.8.29:
+    resolution: {integrity: sha512-/pjQ9lwnL/t1bEfRHQFEJB3kHCR65tpB19NEWmbqcgGgqrfeGo/9b4tUtHbClxQoy3+g6Esx2QRtV7fk7kBPYg==}
+    dependencies:
+      '@types/node': 14.17.3
     dev: true
 
   /abbrev/1.1.1:
@@ -599,6 +621,11 @@ packages:
 
   /delegates/1.0.0:
     resolution: {integrity: sha1-hMbhWbgZBP3KWaDvRM2HDTElD5o=}
+    dev: false
+
+  /denque/1.5.0:
+    resolution: {integrity: sha512-CYiCSgIF1p6EUByQPlGkKnP1M9g0ZV3qMIrqMqZqdwazygIA/YP2vrbcyl1h/WppKJTdl1F85cXIle+394iDAQ==}
+    engines: {node: '>=0.10'}
     dev: false
 
   /depd/1.1.2:
@@ -2009,6 +2036,32 @@ packages:
       strip-indent: 1.0.1
     dev: false
 
+  /redis-commands/1.7.0:
+    resolution: {integrity: sha512-nJWqw3bTFy21hX/CPKHth6sfhZbdiHP6bTawSgQBlKOVRG7EZkfHbbHwQJnrE4vsQf0CMNE+3gJ4Fmm16vdVlQ==}
+    dev: false
+
+  /redis-errors/1.2.0:
+    resolution: {integrity: sha1-62LSrbFeTq9GEMBK/hUpOEJQq60=}
+    engines: {node: '>=4'}
+    dev: false
+
+  /redis-parser/3.0.0:
+    resolution: {integrity: sha1-tm2CjNyv5rS4pCin3vTGvKwxyLQ=}
+    engines: {node: '>=4'}
+    dependencies:
+      redis-errors: 1.2.0
+    dev: false
+
+  /redis/3.1.2:
+    resolution: {integrity: sha512-grn5KoZLr/qrRQVwoSkmzdbw6pwF+/rwODtrOr6vuBRiR/f3rjSTGupbF90Zpqm2oenix8Do6RV7pYEkGwlKkw==}
+    engines: {node: '>=10'}
+    dependencies:
+      denque: 1.5.0
+      redis-commands: 1.7.0
+      redis-errors: 1.2.0
+      redis-parser: 3.0.0
+    dev: false
+
   /regenerator-runtime/0.11.1:
     resolution: {integrity: sha512-MguG95oij0fC3QV3URf4V2SDYGJhJnJGqvIIgdECeODCT98wSWDAJ94SSuVpYQUoTcGUIL6L4yNB7j1DFFHSBg==}
     dev: false
@@ -2451,6 +2504,10 @@ packages:
   /ts-interface-checker/0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
     dev: true
+
+  /ts-toolbelt/9.6.0:
+    resolution: {integrity: sha512-nsZd8ZeNUzukXPlJmTBwUAuABDe/9qtVDelJeT/qW0ow3ZS3BsQJtNkan1802aM9Uf68/Y8ljw86Hu0h5IUW3w==}
+    dev: false
 
   /tsup/4.8.21_typescript@4.2.4:
     resolution: {integrity: sha512-8paK4Q0jvsbZE7v9ptsL1JxUSs83etaml2IrNBOsnTdgrHD/gq9dvxEcWU7rNdyCCh4UhUZ8RlEjRI3etZyfsw==}

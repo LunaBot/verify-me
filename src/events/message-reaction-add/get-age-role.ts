@@ -1,7 +1,9 @@
-import { store } from "../../store";
+import { deserializeGuild, getGuild } from "../../store";
 
-export const getAgeRole = (guildId: string, age: number) => {
-    const ageRoles = store.guilds.get(guildId, 'ageRoles');
+
+export const getAgeRole = async (guildId: string, age: number) => {
+    const guild = await getGuild(guildId, '.').then(deserializeGuild);
+    const ageRoles = guild.ageRoles;
 
     if (age < 18) return;
     if (age < 31) return ageRoles['18-30'];

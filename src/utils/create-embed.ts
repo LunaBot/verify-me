@@ -1,5 +1,5 @@
 import { MessageEmbed } from 'discord.js';
-import { colours } from 'utils';
+import { colours } from './colours';
 
 export const createEmbed = ({ colour, text, author }: { colour?: keyof typeof colours; text?: string; author?: string; }) => {
     return new MessageEmbed({

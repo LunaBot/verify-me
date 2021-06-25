@@ -1,24 +1,27 @@
 import { DiscordAPIError, MessageEmbed, MessageReaction, TextChannel, User } from 'discord.js';
-import { createEmbed } from 'utils/create-embed';
+import { createEmbed } from '../../utils/create-embed';
 import { logger } from '../../logger';
-import { store } from '../../store';
 import { sleep } from '../../utils';
 import { reactions } from './reactions';
+import { deserializeGuild, deserializeTicket, getGuild, getTicket, serialize, updateTicket } from '../../store';
 
 export const onMessageReactionAdd = async function onMessageReactionAdd(reaction: MessageReaction, user: User) {
     try {
         // If we're not in a guild then bail
         if (!reaction.message.guild) return;
 
+        // Get guild from db
+        const guild = await getGuild(reaction.message.guild.id, '.').then(deserializeGuild);
+
         // If we're not in the queue channel then bail
-        if (reaction.message.channel.id !== store.guilds.get(reaction.message.guild.id!, 'queueChannel')) return;
+        if (reaction.message.channel.id !== guild.queueChannel) return;
     
         // Get whole reaction and user
         if (reaction.partial) await reaction.fetch();
         if (user.partial) await user.fetch();
 
         // Bail if it's not an admin
-        if (!reaction.message.guild?.members.cache.get(user.id)?.roles.cache.find(role => role.id === store.guilds.get(reaction.message.guild?.id!, 'adminRole'))) return;
+        if (!reaction.message.guild?.members.cache.get(user.id)?.roles.cache.find(role => role.id === guild.adminRole)) return;
 
         // Attempt to get the ticket number
         const ticketNumber = reaction.message.embeds?.[0]?.footer?.text?.match(/Ticket \#([0-9]+)/)![1];
@@ -67,7 +70,8 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
         auditLogData.image = null;
 
         // Get ticket state
-        const ticketState = store.members.get(`${reaction.message.guild.id}_${member?.id}`, 'state');
+        const ticket = await getTicket(`ticket:${member.user.id}:${ticketNumber}`, '.').then(deserializeTicket);
+        const ticketState = ticket.state;
 
         // Add ticket state to audit-log embed
         auditLogData.addField('Ticket State', ticketState, true);
@@ -75,14 +79,14 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
         // If they're not denied try and reset their state
         if (ticketState !== 'DENIED') {
             // Reset member's ticket state to closed so they can redo it, etc.
-            store.members.set(member?.id, 'CLOSED', 'state');
+            await updateTicket(`ticket:${member.user.id}:${ticketNumber}`, '.state', serialize<string>('CLOSED'));
         }
 
         // Create audit-log embed
         const auditLogEmbed = new MessageEmbed(auditLogData);
 
         // Get audit-log channel ID
-        const auditLogChannelId = store.guilds.get(reaction.message.guild.id, 'auditLogChannel');
+        const auditLogChannelId = guild.auditLogChannel;
 
         // No verification queue channel set
         if (!auditLogChannelId) {
