@@ -24,7 +24,7 @@ export const onMessageReactionAdd = async function onMessageReactionAdd(reaction
         if (!reaction.message.guild?.members.cache.get(user.id)?.roles.cache.find(role => role.id === guild.adminRole)) return;
 
         // Attempt to get the ticket number
-        const ticketNumber = reaction.message.embeds?.[0]?.footer?.text?.match(/Ticket \#([0-9]+)/)![1];
+        const ticketNumber = parseInt(reaction.message.embeds?.[0]?.footer?.text?.match(/Ticket \#([0-9]+)/)![1]!, 10);
 
         // Attempt to get the member ID
         const memberId = reaction.message.embeds?.[0]?.fields.find(field => field.name.toLowerCase() === 'tag')?.value.match(/<@!?(\d+)>/)?.[1];
