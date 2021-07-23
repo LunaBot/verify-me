@@ -47,7 +47,7 @@ export const reactions = {
         await member.roles.add(memberRole);
 
         // Get ticket number
-        const ticketNumber = reaction.message.embeds[0].footer?.text?.match(/Ticket \#([0-9]+)/)![1];
+        const ticketNumber = parseInt(reaction.message.embeds[0].footer?.text?.match(/Ticket \#([0-9]+)/)![1]!, 10);
 
         // Is the member a seller?
         const seller = reaction.message.embeds[0].fields.find(field => field.name.toLowerCase() === 'seller?')?.value.includes('checkmark');
@@ -252,7 +252,7 @@ export const reactions = {
     // Ask member to redo ticket in queue
     async '🔁'(reaction: MessageReaction, member: GuildMember) {
         // Get ticket number
-        const ticketNumber = reaction.message.embeds[0].footer?.text?.match(/Ticket \#([0-9]+)/)![1];
+        const ticketNumber = parseInt(reaction.message.embeds[0].footer?.text?.match(/Ticket \#([0-9]+)/)![1]!, 10);
 
         // Mark as redo
         await updateTicket(`ticket:${member.user.id}:${ticketNumber}`, '.state', serialize<string>('PENDING_REDO'));
@@ -278,7 +278,7 @@ export const reactions = {
     // Deny ticket in queue
     async '👎'(reaction: MessageReaction, member: GuildMember) {
         // Get ticket number
-        const ticketNumber = reaction.message.embeds[0].footer?.text?.match(/Ticket \#([0-9]+)/)![1];
+        const ticketNumber = parseInt(reaction.message.embeds[0].footer?.text?.match(/Ticket \#([0-9]+)/)![1]!, 10);
 
         // Ensure the user can't apply again
         await updateTicket(`ticket:${member.user.id}:${ticketNumber}`, '.state', serialize<string>('DENIED'));
